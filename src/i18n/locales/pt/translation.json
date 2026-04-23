@@ -1,0 +1,239 @@
+{
+  "common": {
+    "save": "Salvar",
+    "cancel": "Cancelar",
+    "delete": "Excluir",
+    "edit": "Editar",
+    "loading": "Carregando...",
+    "search": "Pesquisar",
+    "actions": "Ações",
+    "notifications": "Notificações",
+    "profile": "Perfil",
+    "settings": "Configurações",
+    "logout": "Sair"
+  },
+  "menu": {
+    "dashboard": "Dashboard",
+    "clients": "Meus Clientes",
+    "tools": "Ferramentas",
+    "roda_da_vida": "Roda da Vida",
+    "swot": "Análise SWOT",
+    "meta_smart": "Meta SMART",
+    "disc": "Perfil DISC",
+    "values": "Valores Pessoais",
+    "pdi": "PDI",
+    "diary": "Diário de Reflexão",
+    "progress": "Progresso",
+    "evaluation": "Avaliação de Sessão",
+    "appointments": "Agendamentos",
+    "my_evaluations": "Minhas Avaliações",
+    "support": "Suporte",
+    "manuals": "Manuais",
+    "admin": "Painel Admin"
+  },
+  "pdi": {
+    "dashboard": {
+      "title": "Plano de Desenvolvimento Individual (PDI)",
+      "new_pdi": "Novo PDI",
+      "stats": {
+        "active": "PDIs Ativos",
+        "pending": "Pendentes",
+        "completed": "PDIs Concluídos",
+        "avg_progress": "Progresso Médio",
+        "overdue_actions": "Ações Atrasadas"
+      },
+      "list_title": "Meus PDIs",
+      "no_pdis": "Nenhum PDI encontrado."
+    },
+    "status": {
+      "draft": "Rascunho",
+      "pending_approval": "Pendente de Aprovação",
+      "active": "Ativo",
+      "adjustment_requested": "Ajuste Solicitado",
+      "completed": "Concluído",
+      "cancelled": "Cancelado"
+    },
+    "form": {
+      "create_title": "Criar Novo PDI",
+      "collaborator": "Colaborador",
+      "select_collaborator": "Selecione o colaborador",
+      "manager": "Gestor Responsável",
+      "select_manager": "Selecione o gestor",
+      "start_date": "Data Início",
+      "end_date": "Data Fim",
+      "creating": "Criando...",
+      "create_btn": "Criar PDI",
+      "errors": {
+        "select_collaborator": "Selecione o colaborador",
+        "select_manager": "Selecione o gestor",
+        "fill_dates": "Preencha as datas",
+        "create_error": "Erro ao criar PDI.",
+        "delete_error": "Erro ao excluir PDI",
+        "meta_linked": "Não é possível excluir um PDI que possui metas vinculadas. Remova as metas primeiro.",
+        "feedback_linked": "Não é possível excluir um PDI que possui feedbacks registrados."
+      },
+      "success": {
+        "created": "PDI criado com sucesso!",
+        "updated": "PDI atualizado com sucesso!",
+        "deleted": "PDI excluído com sucesso!",
+        "submitted": "PDI enviado para aprovação!"
+      }
+    },
+    "detail": {
+      "title": "Detalhes do PDI",
+      "collaborator": "Colaborador",
+      "unknown": "Desconhecido",
+      "submit_approval": "Enviar para Aprovação",
+      "edit_dates": "Editar Datas",
+      "delete_confirm": "Tem certeza que deseja excluir este PDI? Esta ação não pode ser desfeita.",
+      "loading": "Carregando PDI...",
+      "tabs": {
+        "overview": "Visão Geral",
+        "goals": "Metas e Ações",
+        "competencies": "Competências",
+        "feedbacks": "Feedbacks",
+        "reports": "Relatórios"
+      },
+      "info": {
+        "title": "Informações do PDI",
+        "start_date": "Data de Início",
+        "end_date": "Data de Fim (Previsão)",
+        "manager": "Gestor Responsável",
+        "role": "Cargo",
+        "sector": "Setor",
+        "engagement": "Engajamento Recente"
+      },
+      "progress": {
+        "title": "Progresso Geral",
+        "completed_actions": "Das ações concluídas"
+      },
+      "gamification": {
+        "title": "Gamificação e Evolução",
+        "current_level": "Nível Atual",
+        "xp_points": "Pontos XP",
+        "xp_bonus": "+50 por ação concluída"
+      },
+      "goals_tab": {
+        "title": "Metas e Plano de Ação",
+        "new_goal": "Nova Meta",
+        "no_goals": "Nenhuma meta definida para este PDI.",
+        "action_plan": "Plano de Ação",
+        "add_action": "Adicionar Ação",
+        "no_actions": "Nenhuma ação cadastrada.",
+        "deadline": "Prazo"
+      },
+      "competencies_tab": {
+        "title": "Competências em Desenvolvimento",
+        "suggest": "Sugerir por Cargo",
+        "add": "Adicionar Competência",
+        "gap_analysis": "Análise de Gap de Competências",
+        "no_competencies": "Nenhuma competência vinculada a este PDI.",
+        "soft_skill": "Soft Skill",
+        "hard_skill": "Hard Skill",
+        "current_level": "Nível Atual",
+        "target_level": "Meta"
+      },
+      "feedbacks_tab": {
+        "title": "Feedbacks Contínuos",
+        "new": "Novo Feedback"
+      },
+      "reports_tab": {
+        "title": "Relatórios do PDI",
+        "performance_summary": "Resumo de Desempenho",
+        "total_goals": "Total de Metas",
+        "completed_actions": "Ações Concluídas",
+        "focus_competencies": "Competências em Foco",
+        "received_feedbacks": "Feedbacks Recebidos"
+      },
+      "modals": {
+        "edit_dates": "Editar Datas do PDI",
+        "new_goal": "Nova Meta",
+        "new_action": "Nova Ação",
+        "new_feedback": "Registrar Feedback",
+        "add_competency": "Adicionar Competência",
+        "title_label": "Título",
+        "desc_label": "Descrição",
+        "deadline_label": "Prazo",
+        "action_desc_label": "Descrição da Ação",
+        "feedback_label": "Feedback",
+        "feedback_placeholder": "Escreva o feedback construtivo...",
+        "competency_label": "Competência",
+        "select_competency": "Selecione a competência",
+        "current_level_label": "Nível Atual (1-5)",
+        "target_level_label": "Nível Meta (1-5)",
+        "save_goal": "Salvar Meta",
+        "save_action": "Salvar Ação",
+        "save_feedback": "Salvar Feedback",
+        "save_competency": "Salvar",
+        "save_changes": "Salvar Alterações"
+      }
+    },
+    "approval": {
+      "title": "Aprovações de PDI",
+      "subtitle": "Revise e aprove os planos de desenvolvimento da sua equipe.",
+      "loading": "Carregando aprovações...",
+      "empty": {
+        "title": "Tudo em dia!",
+        "desc": "Não há PDIs pendentes de aprovação no momento."
+      },
+      "card": {
+        "collaborator": "Usuário",
+        "pending": "Pendente",
+        "view_details": "Ver Detalhes",
+        "request_adjustment": "Solicitar Ajuste",
+        "approve": "Aprovar"
+      },
+      "modal": {
+        "approve_title": "Aprovar PDI",
+        "adjust_title": "Solicitar Ajustes",
+        "approve_desc": "Ao aprovar, o PDI ficará ativo para o colaborador.",
+        "adjust_desc": "Explique quais ajustes são necessários para que o colaborador possa revisar o plano.",
+        "comment_placeholder": "Adicione um comentário (opcional para aprovação, recomendado para ajustes)...",
+        "confirm_approve": "Confirmar Aprovação",
+        "confirm_adjust": "Enviar Solicitação"
+      },
+      "notifications": {
+        "approve_title": "PDI Aprovado!",
+        "adjust_title": "Ajustes no PDI Solicitados",
+        "approve_msg": "Seu Plano de Desenvolvimento Individual foi aprovado e já está ativo.",
+        "adjust_msg": "Seu gestor solicitou alguns ajustes no seu PDI. Confira os detalhes.",
+        "approve_feedback": "PDI Aprovado. {{comment}}",
+        "adjust_feedback": "Ajustes solicitados: {{comment}}"
+      },
+      "success": {
+        "approved": "PDI aprovado com sucesso!",
+        "adjustment_sent": "Solicitação de ajuste enviada."
+      },
+      "error": "Erro ao processar ação."
+    }
+  },
+  "dashboard": {
+    "title": "Dashboard de Evolução",
+    "welcome": "Bem-vindo de volta",
+    "stats": {
+      "roda_avg": "Média Roda da Vida",
+      "metas_completed": "Metas Concluídas",
+      "growth": "Taxa de Crescimento"
+    }
+  },
+  "errors": {
+    "firebase": {
+      "auth/invalid-email": "Endereço de e-mail inválido.",
+      "auth/user-disabled": "Esta conta foi desativada.",
+      "auth/user-not-found": "Usuário não encontrado.",
+      "auth/wrong-password": "Senha incorreta.",
+      "auth/email-already-in-use": "Este e-mail já está em uso.",
+      "auth/weak-password": "A senha é muito fraca. Use pelo menos 6 caracteres.",
+      "auth/network-request-failed": "Falha na conexão. Verifique sua internet.",
+      "auth/too-many-requests": "Muitas tentativas de login. Tente novamente mais tarde.",
+      "auth/invalid-credential": "Credenciais inválidas.",
+      "permission-denied": "Você não tem permissão para realizar esta ação.",
+      "not-found": "O documento solicitado não foi encontrado.",
+      "already-exists": "Este documento já existe.",
+      "resource-exhausted": "Limite de uso excedido. Tente novamente mais tarde.",
+      "unavailable": "O serviço está indisponível no momento.",
+      "unauthenticated": "Você precisa estar logado para realizar esta ação.",
+      "default": "Ocorreu um erro inesperado. Tente novamente."
+    }
+  }
+}

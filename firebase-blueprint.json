@@ -1,0 +1,580 @@
+{
+  "entities": {
+    "User": {
+      "title": "Usuário",
+      "description": "Dados do perfil do usuário mentor ou profissional",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "name": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "user", "client"] },
+        "profissao": { "type": "string" },
+        "especialidade": { "type": "string" },
+        "telefone": { "type": "string" },
+        "habilitado": { "type": "boolean" },
+        "cargo": { "type": "string" },
+        "setor": { "type": "string" },
+        "tipo_usuario": { "type": "string" },
+        "photo_url": { "type": "string" },
+        "welcome_email_sent": { "type": "boolean" },
+        "onboarding_completed": { "type": "boolean" },
+        "notification_preferences": {
+          "type": "object",
+          "properties": {
+            "sessions": { "type": "boolean" },
+            "goals": { "type": "boolean" },
+            "ai_tips": { "type": "boolean" }
+          }
+        },
+        "created_at": { "type": "string", "format": "date-time" }
+      },
+      "required": ["email", "name"]
+    },
+    "AdminAuditLog": {
+      "title": "Registro de Auditoria Administrativa",
+      "description": "Log técnico de ações realizadas em rotas administrativas.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "action": { "type": "string" },
+        "ip": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      }
+    },
+    "RodaDaVida": {
+      "title": "Roda da Vida",
+      "description": "Avaliação da Roda da Vida",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "created_by": { "type": "string" },
+        "cliente_id": { "type": "string", "description": "ID do cliente vinculado" },
+        "created_date": { "type": "string", "format": "date-time" },
+        "saude_fisica": { "type": "number" },
+        "desenvolvimento_mental": { "type": "number" },
+        "inteligencia_emocional": { "type": "number" },
+        "familia": { "type": "number" },
+        "romance": { "type": "number" },
+        "vida_social": { "type": "number" },
+        "carreira": { "type": "number" },
+        "financas": { "type": "number" },
+        "contribuicao_social": { "type": "number" },
+        "divertimento_lazer": { "type": "number" },
+        "saude_ambiente": { "type": "number" }
+      }
+    },
+    "MetaSmart": {
+      "title": "Meta SMART",
+      "description": "Definição de metas SMART",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "created_by": { "type": "string" },
+        "created_at": { "type": "string", "format": "date-time" },
+        "cliente_id": { "type": "string" },
+        "titulo": { "type": "string" },
+        "especifica": { "type": "string" },
+        "mensuravel": { "type": "string" },
+        "atingivel": { "type": "string" },
+        "relevante": { "type": "string" },
+        "temporal": { "type": "string" },
+        "status": { "type": "string", "enum": ["a_fazer", "em_andamento", "concluida", "pausada"] },
+        "prazo": { "type": "string", "format": "date-time" },
+        "last_overdue_notification_at": { "type": "string", "format": "date-time" },
+        "completed_notification_sent": { "type": "boolean" }
+      }
+    },
+    "DiarioReflexao": {
+      "title": "Diário de Reflexão",
+      "description": "Registros diários de reflexão",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "created_by": { "type": "string" },
+        "created_date": { "type": "string", "format": "date-time" },
+        "conteudo": { "type": "string" },
+        "sentimento": { "type": "string" },
+        "is_private": { "type": "boolean" },
+        "data": { "type": "string", "format": "date-time" }
+      }
+    },
+    "Agendamento": {
+      "title": "Agendamento",
+      "description": "Sessões agendadas",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "created_by": { "type": "string" },
+        "created_date": { "type": "string", "format": "date-time" },
+        "cliente_id": { "type": "string" },
+        "data_inicio": { "type": "string", "format": "date-time" },
+        "data_fim": { "type": "string", "format": "date-time" },
+        "titulo": { "type": "string" },
+        "descricao": { "type": "string" },
+        "tipo": { "type": "string", "enum": ["sessao", "tarefa", "acompanhamento", "revisao"] },
+        "status": { "type": "string", "enum": ["pendente", "em_andamento", "concluido", "cancelado"] },
+        "google_event_id": { "type": "string", "description": "ID do evento no Google Calendar" }
+      }
+    },
+    "Cliente": {
+      "title": "Cliente",
+      "description": "Dados do cliente de mentoring",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "profissional_id": { "type": "string" },
+        "user_id": { "type": "string", "description": "UID do Firebase Auth vinculado ao cliente" },
+        "nome": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "telefone": { "type": "string" },
+        "status": { "type": "string", "enum": ["ativo", "inativo"] },
+        "tags": { "type": "array", "items": { "type": "string" } },
+        "portal_enabled": { "type": "boolean" },
+        "data_inicio": { "type": "string", "format": "date-time" }
+      },
+      "required": ["nome", "email", "profissional_id"]
+    },
+    "AnaliseSwot": {
+      "title": "Análise SWOT",
+      "description": "Forças, Fraquezas, Oportunidades e Ameaças",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "created_by": { "type": "string" },
+        "created_at": { "type": "string", "format": "date-time" },
+        "cliente_id": { "type": "string" },
+        "titulo": { "type": "string" },
+        "forcas": { "type": "array", "items": { "type": "string" } },
+        "fraquezas": { "type": "array", "items": { "type": "string" } },
+        "oportunidades": { "type": "array", "items": { "type": "string" } },
+        "ameacas": { "type": "array", "items": { "type": "string" } },
+        "plano_acao": { "type": "string" }
+      }
+    },
+    "PerfilDisc": {
+      "title": "Perfil DISC",
+      "description": "Avaliação comportamental DISC",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "created_by": { "type": "string" },
+        "created_at": { "type": "string", "format": "date-time" },
+        "cliente_id": { "type": "string" },
+        "titulo": { "type": "string" },
+        "dominancia": { "type": "number" },
+        "influencia": { "type": "number" },
+        "estabilidade": { "type": "number" },
+        "conformidade": { "type": "number" },
+        "perfil_dominante": { "type": "string" },
+        "descricao_perfil": { "type": "string" },
+        "pdf_url": { "type": "string", "description": "Link permanente para o relatório em PDF" },
+        "results_saved": { "type": "boolean", "description": "Indica se os dados completos foram persistidos com sucesso" },
+        "respostas": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "number" },
+              "valor": { "type": "number" }
+            }
+          }
+        }
+      }
+    },
+    "AvaliacaoValores": {
+      "title": "Avaliação de Valores",
+      "description": "Identificação e prática de valores pessoais",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "created_by": { "type": "string" },
+        "created_at": { "type": "string", "format": "date-time" },
+        "cliente_id": { "type": "string" },
+        "titulo": { "type": "string" },
+        "valores_selecionados": { 
+          "type": "array", 
+          "items": { 
+            "type": "object",
+            "properties": {
+              "valor": { "type": "string" },
+              "importancia": { "type": "number" },
+              "praticando": { "type": "number" }
+            }
+          } 
+        },
+        "reflexoes": { "type": "string" }
+      }
+    },
+    "PDI": {
+      "title": "PDI",
+      "description": "Plano de Desenvolvimento Individual",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "usuario_id": { "type": "string" },
+        "gestor_id": { "type": "string" },
+        "data_inicio": { "type": "string", "format": "date-time" },
+        "data_fim": { "type": "string", "format": "date-time" },
+        "status": { "type": "string", "enum": ["rascunho", "pendente_aprovacao", "ativo", "ajuste_solicitado", "concluído", "cancelado"] },
+        "created_at": { "type": "string", "format": "date-time" }
+      }
+    },
+    "PDIMeta": {
+      "title": "Meta do PDI",
+      "description": "Meta específica dentro de um PDI",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "pdi_id": { "type": "string" },
+        "titulo": { "type": "string" },
+        "descricao": { "type": "string" },
+        "prazo": { "type": "string", "format": "date-time" },
+        "status": { "type": "string" },
+        "progresso": { "type": "number" }
+      }
+    },
+    "PDIAcao": {
+      "title": "Ação do PDI",
+      "description": "Ação específica para atingir uma meta do PDI",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "meta_id": { "type": "string" },
+        "pdi_id": { "type": "string" },
+        "descricao": { "type": "string" },
+        "prazo": { "type": "string", "format": "date-time" },
+        "status": { "type": "string", "enum": ["pendente", "concluído"] }
+      }
+    },
+    "PDIFeedback": {
+      "title": "Feedback do PDI",
+      "description": "Feedback contínuo sobre o PDI",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "pdi_id": { "type": "string" },
+        "autor_id": { "type": "string" },
+        "descricao": { "type": "string" },
+        "data": { "type": "string", "format": "date-time" }
+      }
+    },
+    "Competencia": {
+      "title": "Competência",
+      "description": "Definição de competência (Soft/Hard Skill)",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "nome": { "type": "string" },
+        "tipo": { "type": "string", "enum": ["soft", "hard"] }
+      }
+    },
+    "PDICompetencia": {
+      "title": "Competência do PDI",
+      "description": "Vínculo entre PDI e Competência",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "pdi_id": { "type": "string" },
+        "competencia_id": { "type": "string" },
+        "nivel_atual": { "type": "string" },
+        "nivel_meta": { "type": "string" }
+      }
+    },
+    "Notification": {
+      "title": "Notificação",
+      "description": "Notificações do sistema para o usuário",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "message": { "type": "string" },
+        "type": { "type": "string", "enum": ["info", "success", "warning", "error"] },
+        "read": { "type": "boolean" },
+        "link": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "title", "message", "type", "read", "createdAt"]
+    },
+    "SessaoMentoring": {
+      "title": "Sessão de Mentoring",
+      "description": "Registro de progresso e notas de uma sessão de mentoring",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "cliente_id": { "type": "string" },
+        "mentor_id": { "type": "string" },
+        "created_by": { "type": "string" },
+        "data": { "type": "string", "format": "date-time" },
+        "titulo": { "type": "string" },
+        "notas": { "type": "string" },
+        "progresso": { "type": "number" },
+        "meta_ids": { "type": "array", "items": { "type": "string" } },
+        "status": { "type": "string", "enum": ["realizada", "pendente", "cancelada"] }
+      },
+      "required": ["cliente_id", "created_by", "data", "titulo"]
+    },
+    "AvaliacaoSessao": {
+      "title": "Avaliação da Sessão",
+      "description": "Feedback do cliente sobre uma sessão de mentoring",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "mentor_id": { "type": "string" },
+        "cliente_id": { "type": "string" },
+        "sessao_id": { "type": "string" },
+        "nota": { "type": "number" },
+        "pontosPositivos": { "type": "string" },
+        "pontosMelhoria": { "type": "string" },
+        "data": { "type": "string", "format": "date-time" }
+      },
+      "required": ["mentor_id", "cliente_id", "nota", "data"]
+    },
+    "Invitation": {
+      "title": "Convite",
+      "description": "Convite para novos usuários",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "name": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "accepted", "expired"] },
+        "invited_by": { "type": "string" },
+        "created_at": { "type": "string", "format": "date-time" }
+      },
+      "required": ["email", "name", "invited_by"]
+    },
+    "FAQ": {
+      "title": "FAQ",
+      "description": "Perguntas Frequentes",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "question": { "type": "string" },
+        "answer": { "type": "string" },
+        "category": { "type": "string" },
+        "order": { "type": "number" },
+        "active": { "type": "boolean" },
+        "created_at": { "type": "string", "format": "date-time" }
+      },
+      "required": ["question", "answer"]
+    },
+    "ProfessionalNote": {
+      "title": "Anotação do Profissional",
+      "description": "Notas privadas do mentor sobre o cliente",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "cliente_id": { "type": "string" },
+        "mentor_id": { "type": "string" },
+        "content": { "type": "string" },
+        "created_at": { "type": "string", "format": "date-time" },
+        "updated_at": { "type": "string", "format": "date-time" }
+      },
+      "required": ["cliente_id", "mentor_id", "content"]
+    },
+    "Admin": {
+      "title": "Administrador",
+      "description": "Lista de UIDs com permissões administrativas",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "added_at": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email"]
+    },
+    "GoogleToken": {
+      "title": "Token do Google",
+      "description": "Tokens de acesso e refresh para o Google Calendar",
+      "type": "object",
+      "properties": {
+        "access_token": { "type": "string" },
+        "refresh_token": { "type": "string" },
+        "scope": { "type": "string" },
+        "token_type": { "type": "string" },
+        "expiry_date": { "type": "number" }
+      },
+      "required": ["access_token", "refresh_token", "expiry_date"]
+    },
+    "Mensagem": {
+      "title": "Mensagem",
+      "description": "Mensagem trocada entre mentor e mentorado",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "cliente_id": { "type": "string" },
+        "mentor_id": { "type": "string" },
+        "sender_id": { "type": "string" },
+        "content": { "type": "string" },
+        "created_at": { "type": "string", "format": "date-time" },
+        "read": { "type": "boolean" }
+      },
+      "required": ["cliente_id", "mentor_id", "sender_id", "content", "created_at"]
+    },
+    "Plano": {
+      "title": "Plano de Assinatura",
+      "description": "Planos disponíveis para usuários e seus recursos",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "features": { "type": "array", "items": { "type": "string" } },
+        "price": { "type": "number" },
+        "interval": { "type": "string" },
+        "active": { "type": "boolean" },
+        "popular": { "type": "boolean" },
+        "mp_price_id": { "type": "string" },
+        "stripe_price_id": { "type": "string" }
+      }
+    },
+    "SystemLog": {
+      "title": "Log de Sistema",
+      "description": "Registros de auditoria de ações administrativas",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "userEmail": { "type": "string" },
+        "action": { "type": "string" },
+        "details": { "type": "string" },
+        "metadata": { "type": "object" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "action", "details", "timestamp"]
+    },
+    "RevenueRecord": {
+      "title": "Registro de Receita",
+      "description": "Histórico de transações financeiras na plataforma",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "plan": { "type": "string", "enum": ["pro", "master"] },
+        "amount": { "type": "number" },
+        "currency": { "type": "string" },
+        "gateway": { "type": "string", "enum": ["stripe", "mercadopago"] },
+        "paymentId": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "plan", "amount", "timestamp"]
+    }
+  },
+  "firestore": {
+    "/revenue_history/{revenueId}": {
+      "schema": "RevenueRecord",
+      "description": "Histórico de transações financeiras"
+    },
+    "/system_logs/{logId}": {
+      "schema": "SystemLog",
+      "description": "Logs de auditoria do sistema"
+    },
+    "/planos/{planoId}": {
+      "schema": "Plano",
+      "description": "Lista de planos de assinatura"
+    },
+    "/mensagens/{mensagemId}": {
+      "schema": "Mensagem",
+      "description": "Mensagens trocadas no sistema"
+    },
+    "/admins/{adminId}": {
+      "schema": "Admin",
+      "description": "Lista de administradores"
+    },
+    "/users/{userId}/tokens/google": {
+      "schema": "GoogleToken",
+      "description": "Tokens do Google Calendar do usuário"
+    },
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Perfis de usuários"
+    },
+    "/rodas_da_vida/{rodaId}": {
+      "schema": "RodaDaVida",
+      "description": "Avaliações da Roda da Vida"
+    },
+    "/metas_smart/{metaId}": {
+      "schema": "MetaSmart",
+      "description": "Metas SMART dos usuários"
+    },
+    "/diarios_reflexao/{diarioId}": {
+      "schema": "DiarioReflexao",
+      "description": "Entradas do diário de reflexão"
+    },
+    "/agendamentos/{agendamentoId}": {
+      "schema": "Agendamento",
+      "description": "Agendamentos de sessões"
+    },
+    "/clientes/{clienteId}": {
+      "schema": "Cliente",
+      "description": "Lista de clientes dos profissionais"
+    },
+    "/analises_swot/{swotId}": {
+      "schema": "AnaliseSwot",
+      "description": "Análises SWOT realizadas"
+    },
+    "/perfis_disc/{discId}": {
+      "schema": "PerfilDisc",
+      "description": "Avaliações DISC realizadas"
+    },
+    "/valores_pessoais/{valorId}": {
+      "schema": "AvaliacaoValores",
+      "description": "Avaliações de valores pessoais"
+    },
+    "/pdis/{pdiId}": {
+      "schema": "PDI",
+      "description": "Planos de Desenvolvimento Individual"
+    },
+    "/pdi_metas/{metaId}": {
+      "schema": "PDIMeta",
+      "description": "Metas dos PDIs"
+    },
+    "/pdi_acoes/{acaoId}": {
+      "schema": "PDIAcao",
+      "description": "Ações das metas dos PDIs"
+    },
+    "/pdi_feedbacks/{feedbackId}": {
+      "schema": "PDIFeedback",
+      "description": "Feedbacks dos PDIs"
+    },
+    "/competencias/{competenciaId}": {
+      "schema": "Competencia",
+      "description": "Catálogo de competências"
+    },
+    "/pdi_competencias/{pdiCompId}": {
+      "schema": "PDICompetencia",
+      "description": "Competências vinculadas aos PDIs"
+    },
+    "/notifications/{notificationId}": {
+      "schema": "Notification",
+      "description": "Notificações dos usuários"
+    },
+    "/sessoes_mentoring/{sessaoId}": {
+      "schema": "SessaoMentoring",
+      "description": "Registros de sessões de mentoring"
+    },
+    "/avaliacoes_sessoes/{avaliacaoId}": {
+      "schema": "AvaliacaoSessao",
+      "description": "Avaliações das sessões enviadas pelos clientes"
+    },
+    "/invitations/{invitationId}": {
+      "schema": "Invitation",
+      "description": "Convites enviados"
+    },
+    "/faqs/{faqId}": {
+      "schema": "FAQ",
+      "description": "Perguntas frequentes"
+    },
+    "/clientes/{clienteId}/professional_notes/{noteId}": {
+      "schema": "ProfessionalNote",
+      "description": "Notas privadas sobre o cliente"
+    },
+    "/admin_audit_logs/{logId}": {
+      "schema": "AdminAuditLog",
+      "description": "Logs de auditoria técnica para ações administrativas."
+    }
+  }
+}

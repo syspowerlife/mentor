@@ -1,0 +1,219 @@
+{
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "loading": "Loading...",
+    "search": "Search",
+    "actions": "Actions",
+    "notifications": "Notifications",
+    "profile": "Profile",
+    "settings": "Settings",
+    "logout": "Logout"
+  },
+  "menu": {
+    "dashboard": "Dashboard",
+    "clients": "My Clients",
+    "tools": "Tools",
+    "roda_da_vida": "Wheel of Life",
+    "swot": "SWOT Analysis",
+    "meta_smart": "SMART Goal",
+    "disc": "DISC Profile",
+    "values": "Personal Values",
+    "pdi": "IDP",
+    "diary": "Reflection Diary",
+    "progress": "Progress",
+    "evaluation": "Session Evaluation",
+    "appointments": "Appointments",
+    "my_evaluations": "My Evaluations",
+    "support": "Support",
+    "manuals": "Manuals",
+    "admin": "Admin Panel"
+  },
+  "pdi": {
+    "dashboard": {
+      "title": "Individual Development Plan (IDP)",
+      "new_pdi": "New IDP",
+      "stats": {
+        "active": "Active IDPs",
+        "pending": "Pending",
+        "completed": "Completed IDPs",
+        "avg_progress": "Average Progress",
+        "overdue_actions": "Overdue Actions"
+      },
+      "list_title": "My IDPs",
+      "no_pdis": "No IDPs found."
+    },
+    "status": {
+      "draft": "Draft",
+      "pending_approval": "Pending Approval",
+      "active": "Active",
+      "adjustment_requested": "Adjustment Requested",
+      "completed": "Completed",
+      "cancelled": "Cancelled"
+    },
+    "form": {
+      "create_title": "Create New IDP",
+      "collaborator": "Collaborator",
+      "select_collaborator": "Select collaborator",
+      "manager": "Responsible Manager",
+      "select_manager": "Select manager",
+      "start_date": "Start Date",
+      "end_date": "End Date",
+      "creating": "Creating...",
+      "create_btn": "Create IDP",
+      "errors": {
+        "select_collaborator": "Please select a collaborator",
+        "select_manager": "Please select a manager",
+        "fill_dates": "Please fill in the dates",
+        "create_error": "Error creating IDP.",
+        "delete_error": "Error deleting IDP",
+        "meta_linked": "Cannot delete an IDP that has linked goals. Remove goals first.",
+        "feedback_linked": "Cannot delete an IDP that has registered feedbacks."
+      },
+      "success": {
+        "created": "IDP created successfully!",
+        "updated": "IDP updated successfully!",
+        "deleted": "IDP deleted successfully!",
+        "submitted": "IDP submitted for approval!"
+      }
+    },
+    "detail": {
+      "title": "IDP Details",
+      "collaborator": "Collaborator",
+      "unknown": "Unknown",
+      "submit_approval": "Submit for Approval",
+      "edit_dates": "Edit Dates",
+      "delete_confirm": "Are you sure you want to delete this IDP? This action cannot be undone.",
+      "loading": "Loading IDP...",
+      "tabs": {
+        "overview": "Overview",
+        "goals": "Goals and Actions",
+        "competencies": "Competencies",
+        "feedbacks": "Feedbacks",
+        "reports": "Reports"
+      },
+      "info": {
+        "title": "IDP Information",
+        "start_date": "Start Date",
+        "end_date": "End Date (Forecast)",
+        "manager": "Responsible Manager",
+        "role": "Role",
+        "sector": "Sector",
+        "engagement": "Recent Engagement"
+      },
+      "progress": {
+        "title": "Overall Progress",
+        "completed_actions": "Of completed actions"
+      },
+      "gamification": {
+        "title": "Gamification and Evolution",
+        "current_level": "Current Level",
+        "xp_points": "XP Points",
+        "xp_bonus": "+50 per completed action"
+      },
+      "goals_tab": {
+        "title": "Goals and Action Plan",
+        "new_goal": "New Goal",
+        "no_goals": "No goals defined for this IDP.",
+        "action_plan": "Action Plan",
+        "add_action": "Add Action",
+        "no_actions": "No actions registered.",
+        "deadline": "Deadline"
+      },
+      "competencies_tab": {
+        "title": "Competencies in Development",
+        "suggest": "Suggest by Role",
+        "add": "Add Competency",
+        "gap_analysis": "Competency Gap Analysis",
+        "no_competencies": "No competencies linked to this IDP.",
+        "soft_skill": "Soft Skill",
+        "hard_skill": "Hard Skill",
+        "current_level": "Current Level",
+        "target_level": "Target"
+      },
+      "feedbacks_tab": {
+        "title": "Continuous Feedbacks",
+        "new": "New Feedback"
+      },
+      "reports_tab": {
+        "title": "IDP Reports",
+        "performance_summary": "Performance Summary",
+        "total_goals": "Total Goals",
+        "completed_actions": "Completed Actions",
+        "focus_competencies": "Focus Competencies",
+        "received_feedbacks": "Received Feedbacks"
+      },
+      "modals": {
+        "edit_dates": "Edit IDP Dates",
+        "new_goal": "New Goal",
+        "new_action": "New Action",
+        "new_feedback": "Register Feedback",
+        "add_competency": "Add Competency",
+        "title_label": "Title",
+        "desc_label": "Description",
+        "deadline_label": "Deadline",
+        "action_desc_label": "Action Description",
+        "feedback_label": "Feedback",
+        "feedback_placeholder": "Write constructive feedback...",
+        "competency_label": "Competency",
+        "select_competency": "Select competency",
+        "current_level_label": "Current Level (1-5)",
+        "target_level_label": "Target Level (1-5)",
+        "save_goal": "Save Goal",
+        "save_action": "Save Action",
+        "save_feedback": "Save Feedback",
+        "save_competency": "Save",
+        "save_changes": "Save Changes"
+      }
+    },
+    "approval": {
+      "title": "IDP Approvals",
+      "subtitle": "Review and approve your team's development plans.",
+      "loading": "Loading approvals...",
+      "empty": {
+        "title": "All caught up!",
+        "desc": "There are no IDPs pending approval at the moment."
+      },
+      "card": {
+        "collaborator": "User",
+        "pending": "Pending",
+        "view_details": "View Details",
+        "request_adjustment": "Request Adjustment",
+        "approve": "Approve"
+      },
+      "modal": {
+        "approve_title": "Approve IDP",
+        "adjust_title": "Request Adjustments",
+        "approve_desc": "By approving, the IDP will become active for the collaborator.",
+        "adjust_desc": "Explain what adjustments are needed so the collaborator can revise the plan.",
+        "comment_placeholder": "Add a comment (optional for approval, recommended for adjustments)...",
+        "confirm_approve": "Confirm Approval",
+        "confirm_adjust": "Send Request"
+      },
+      "notifications": {
+        "approve_title": "IDP Approved!",
+        "adjust_title": "IDP Adjustments Requested",
+        "approve_msg": "Your Individual Development Plan has been approved and is now active.",
+        "adjust_msg": "Your manager requested some adjustments to your IDP. Check the details.",
+        "approve_feedback": "IDP Approved. {{comment}}",
+        "adjust_feedback": "Adjustments requested: {{comment}}"
+      },
+      "success": {
+        "approved": "IDP approved successfully!",
+        "adjustment_sent": "Adjustment request sent."
+      },
+      "error": "Error processing action."
+    }
+  },
+  "dashboard": {
+    "title": "Evolution Dashboard",
+    "welcome": "Welcome back",
+    "stats": {
+      "roda_avg": "Wheel of Life Avg",
+      "metas_completed": "Completed Goals",
+      "growth": "Growth Rate"
+    }
+  }
+}

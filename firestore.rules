@@ -1,0 +1,554 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Document ID: {userId}
+    // Fields:
+    //   - email: string (required)
+    //   - name: string (required)
+    //   - role: string (admin/user)
+    //   - photo_url: string (optional)
+    //
+    // Collection: rodas_da_vida
+    // Document ID: {rodaId}
+    // Fields:
+    //   - created_by: string (UID)
+    //   - created_date: timestamp
+    //   - saude_fisica: number (0-10)
+    //   ... (outras áreas da roda)
+    //
+    // Collection: metas_smart
+    // Document ID: {metaId}
+    // Fields:
+    //   - created_by: string (UID)
+    //   - status: string (pendente, em_andamento, concluida, pausada)
+    //   - titulo: string
+    //
+    // Collection: clientes
+    // Document ID: {clienteId}
+    // Fields:
+    //   - profissional_id: string (UID)
+    //   - nome: string
+    //   - email: string
+    //   - telefone: string
+    //   - status: string
+    //   - data_inicio: timestamp
+    //
+    // Collection: sessoes_mentoring
+    // Document ID: {sessaoId}
+    // Fields:
+    //   - created_by: string (UID)
+    //   - cliente_id: string
+    //   - data: timestamp
+    //   - titulo: string
+    //   - notas: string
+    //   - progresso: number (0-10)
+    //
+    // Collection: avaliacoes_sessoes
+    // Document ID: {avaliacaoId}
+    // Fields:
+    //   - mentor_id: string (UID)
+    //   - cliente_id: string (UID)
+    //   - sessao_id: string (optional)
+    //   - nota: number (1-5)
+    //   - pontosPositivos: string
+    //   - pontosMelhoria: string
+    //   - data: timestamp
+    //
+    // ===============================================================
+
+    // Helper Functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isDocOwner() {
+      return isAuthenticated() && request.auth.uid == resource.data.created_by;
+    }
+
+    function isProfissionalOwner() {
+      return isAuthenticated() && request.auth.uid == resource.data.profissional_id;
+    }
+
+    function isClientOf(clienteId) {
+      return isAuthenticated() && 
+             (get(/databases/$(database)/documents/clientes/$(clienteId)).data.user_id == request.auth.uid ||
+              get(/databases/$(database)/documents/clientes/$(clienteId)).data.profissional_id == request.auth.uid);
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && (
+        (request.auth.token.email != null && request.auth.token.email == "sys.powerlife@gmail.com") ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    function getPdi(pdiId) {
+      return get(/databases/$(database)/documents/pdis/$(pdiId)).data;
+    }
+
+    function isPdiParticipant(pdiId) {
+      let pdi = getPdi(pdiId);
+      return isAuthenticated() && (request.auth.uid == pdi.usuario_id || request.auth.uid == pdi.gestor_id || isAdmin());
+    }
+
+    function isPdiEditor(pdiId) {
+      let pdi = getPdi(pdiId);
+      return isAuthenticated() && (
+        request.auth.uid == pdi.gestor_id || 
+        isAdmin() ||
+        (request.auth.uid == pdi.usuario_id && (pdi.status == 'rascunho' || pdi.status == 'ajuste_solicitado'))
+      );
+    }
+
+    function isRecent(time) {
+      return time > request.time - duration.value(24, 'h') && time < request.time + duration.value(5, 'm');
+    }
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['email', 'name']) &&
+             data.email is string && data.email.size() > 5 && data.email.size() < 100 &&
+             data.name is string && data.name.size() > 2 && data.name.size() < 100 &&
+             (!('photo_url' in data) || (data.photo_url is string && data.photo_url.size() < 500)) &&
+             (!('profissao' in data) || (data.profissao is string && data.profissao.size() < 100)) &&
+             (!('especialidade' in data) || (data.especialidade is string && data.especialidade.size() < 100)) &&
+             (!('telefone' in data) || (data.telefone is string && data.telefone.size() < 20)) &&
+             (!('plan' in data) || (data.plan in ['free', 'pro', 'master'])) &&
+             (!('stripeCustomerId' in data) || (data.stripeCustomerId is string)) &&
+             (!('subscriptionStatus' in data) || (data.subscriptionStatus is string));
+    }
+
+    function isValidRoda(data) {
+      return data.created_by == request.auth.uid &&
+             data.saude_fisica is number && data.saude_fisica >= 0 && data.saude_fisica <= 10 &&
+             data.desenvolvimento_mental is number && data.desenvolvimento_mental >= 0 && data.desenvolvimento_mental <= 10 &&
+             data.inteligencia_emocional is number && data.inteligencia_emocional >= 0 && data.inteligencia_emocional <= 10 &&
+             data.familia is number && data.familia >= 0 && data.familia <= 10 &&
+             data.romance is number && data.romance >= 0 && data.romance <= 10 &&
+             data.vida_social is number && data.vida_social >= 0 && data.vida_social <= 10 &&
+             data.carreira is number && data.carreira >= 0 && data.carreira <= 10 &&
+             data.financas is number && data.financas >= 0 && data.financas <= 10 &&
+             data.contribuicao_social is number && data.contribuicao_social >= 0 && data.contribuicao_social <= 10 &&
+             data.divertimento_lazer is number && data.divertimento_lazer >= 0 && data.divertimento_lazer <= 10 &&
+             data.saude_ambiente is number && data.saude_ambiente >= 0 && data.saude_ambiente <= 10 &&
+             data.created_date is timestamp &&
+             (!('cliente_id' in data) || (data.cliente_id is string || data.cliente_id == null));
+    }
+
+    function isValidMeta(data) {
+      return data.created_by == request.auth.uid &&
+             data.titulo is string && data.titulo.size() > 0 && data.titulo.size() < 200 &&
+             data.status in ['a_fazer', 'em_andamento', 'concluida', 'pausada'] &&
+             (!('especifica' in data) || (data.especifica is string && data.especifica.size() < 500)) &&
+             (!('mensuravel' in data) || (data.mensuravel is string && data.mensuravel.size() < 500)) &&
+             (!('atingivel' in data) || (data.atingivel is string && data.atingivel.size() < 500)) &&
+             (!('relevante' in data) || (data.relevante is string && data.relevante.size() < 500)) &&
+             (!('temporal' in data) || (data.temporal is string && data.temporal.size() < 500)) &&
+             (!('prazo' in data) || (data.prazo is string && data.prazo.size() < 20)) &&
+             (!('cliente_id' in data) || (data.cliente_id is string || data.cliente_id == null));
+    }
+
+    function isValidCliente(data) {
+      return data.profissional_id == request.auth.uid &&
+             data.nome is string && data.nome.size() > 0 && data.nome.size() < 100 &&
+             data.email is string && data.email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$") &&
+             (!('telefone' in data) || (data.telefone is string && data.telefone.size() < 20)) &&
+             (!('status' in data) || (data.status is string && data.status.size() < 50)) &&
+             (!('tags' in data) || data.tags is list) &&
+             data.data_inicio is timestamp;
+    }
+
+    function isValidProfessionalNote(data) {
+      return data.mentor_id == request.auth.uid &&
+             data.cliente_id is string &&
+             data.content is string && data.content.size() > 0 &&
+             data.created_at is timestamp;
+    }
+
+    function isValidNotification(data) {
+      return data.userId == request.auth.uid &&
+             data.title is string && data.title.size() > 0 && data.title.size() < 100 &&
+             data.message is string && data.message.size() > 0 && data.message.size() < 500 &&
+             data.type in ['info', 'success', 'warning', 'error'] &&
+             data.read is bool &&
+             data.createdAt is timestamp &&
+             (!('triggerId' in data) || (data.triggerId is string && data.triggerId.size() < 100));
+    }
+
+    function isValidSessao(data) {
+      return data.created_by == request.auth.uid &&
+             data.cliente_id is string &&
+             data.titulo is string && data.titulo.size() > 0 && data.titulo.size() < 200 &&
+             (!('notas' in data) || (data.notas is string && data.notas.size() < 500)) &&
+             (!('progresso' in data) || (data.progresso is number && data.progresso >= 0 && data.progresso <= 10)) &&
+             (!('meta_ids' in data) || data.meta_ids is list) &&
+             data.data is timestamp;
+    }
+
+    function isValidAvaliacao(data) {
+      return data.cliente_id == request.auth.uid &&
+             data.mentor_id is string &&
+             data.nota is number && data.nota >= 1 && data.nota <= 5 &&
+             (!('pontosPositivos' in data) || (data.pontosPositivos is string && data.pontosPositivos.size() < 2000)) &&
+             (!('pontosMelhoria' in data) || (data.pontosMelhoria is string && data.pontosMelhoria.size() < 2000)) &&
+             data.data is timestamp;
+    }
+
+    function isValidSwot(data) {
+      return data.created_by == request.auth.uid &&
+             (!('forcas' in data) || (data.forcas is list && data.forcas.size() < 20)) &&
+             (!('fraquezas' in data) || (data.fraquezas is list && data.fraquezas.size() < 20)) &&
+             (!('oportunidades' in data) || (data.oportunidades is list && data.oportunidades.size() < 20)) &&
+             (!('ameacas' in data) || (data.ameacas is list && data.ameacas.size() < 20)) &&
+             data.created_at is timestamp &&
+             (!('cliente_id' in data) || (data.cliente_id is string || data.cliente_id == null));
+    }
+
+    function isValidAgendamento(data) {
+      return data.created_by == request.auth.uid &&
+             data.titulo is string && data.titulo.size() > 0 && data.titulo.size() < 200 &&
+             (!('descricao' in data) || (data.descricao is string && data.descricao.size() < 1000)) &&
+             data.data_inicio is string && data.data_inicio.size() < 50 &&
+             (!('data_fim' in data) || (data.data_fim is string && data.data_fim.size() < 50)) &&
+             data.tipo in ['sessao', 'tarefa', 'acompanhamento', 'revisao'] &&
+             data.status in ['pendente', 'em_andamento', 'concluido', 'cancelado'] &&
+             data.created_at is timestamp &&
+             (!('google_event_id' in data) || (data.google_event_id is string && data.google_event_id.size() < 500)) &&
+             (!('cliente_id' in data) || (data.cliente_id is string || data.cliente_id == null));
+    }
+
+    function isValidValores(data) {
+      return data.created_by == request.auth.uid &&
+             data.titulo is string && data.titulo.size() > 0 &&
+             data.valores_selecionados is list && data.valores_selecionados.size() <= 10 &&
+             data.created_at is timestamp &&
+             (!('cliente_id' in data) || (data.cliente_id is string || data.cliente_id == null));
+    }
+
+    function isValidPdi(data) {
+      return data.usuario_id is string &&
+             data.gestor_id is string &&
+             data.status in ['rascunho', 'pendente_aprovacao', 'ativo', 'ajuste_solicitado', 'concluido', 'cancelado'] &&
+             data.created_at is timestamp &&
+             data.data_inicio is string &&
+             data.data_fim is string;
+    }
+
+    function isValidAnexo(data) {
+      return data.uploadedBy == request.auth.uid &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 255 &&
+             data.url is string && data.url.size() < 1000 &&
+             data.type is string &&
+             data.uploadedAt is timestamp;
+    }
+
+    function isValidPdiItem(data) {
+      return isAuthenticated() &&
+             data.titulo is string && data.titulo.size() > 0 && data.titulo.size() < 200 &&
+             (!('descricao' in data) || (data.descricao is string && data.descricao.size() < 2000)) &&
+             (!('status' in data) || (data.status is string && data.status.size() < 50)) &&
+             (!('pdi_id' in data) || data.pdi_id is string) &&
+             (!('meta_id' in data) || data.meta_id is string);
+    }
+
+    function isValidPdiFeedback(data) {
+      return isAuthenticated() &&
+             data.autor_id == request.auth.uid &&
+             data.descricao is string && data.descricao.size() > 0 && data.descricao.size() < 2000 &&
+             data.pdi_id is string &&
+             data.data is string;
+    }
+
+    function isValidPdiCompetencia(data) {
+      return isAuthenticated() &&
+             data.pdi_id is string &&
+             data.competencia_id is string &&
+             data.nivel_atual is string && data.nivel_atual.size() > 0 && data.nivel_atual.size() < 10 &&
+             data.nivel_meta is string && data.nivel_meta.size() > 0 && data.nivel_meta.size() < 10;
+    }
+
+    function isValidDisc(data) {
+      return data.created_by == request.auth.uid &&
+             data.titulo is string && data.titulo.size() > 0 && data.titulo.size() < 200 &&
+             data.dominancia is number && data.dominancia >= 0 && data.dominancia <= 100 &&
+             data.influencia is number && data.influencia >= 0 && data.influencia <= 100 &&
+             data.estabilidade is number && data.estabilidade >= 0 && data.estabilidade <= 100 &&
+             data.conformidade is number && data.conformidade >= 0 && data.conformidade <= 100 &&
+             data.perfil_dominante is string && data.perfil_dominante.size() > 0 && data.perfil_dominante.size() < 10 &&
+             data.created_at is timestamp &&
+             (!('cliente_id' in data) || (data.cliente_id is string || data.cliente_id == null));
+    }
+
+    function isValidInvitation(data) {
+      return data.invited_by == request.auth.uid &&
+             data.email is string && isValidEmail(data.email) &&
+             data.name is string && data.name.size() > 0 &&
+             data.status in ['pending', 'accepted', 'expired'] &&
+             data.created_at is timestamp;
+    }
+
+    function isValidFaq(data) {
+      return data.question is string && data.question.size() > 0 &&
+             data.answer is string && data.answer.size() > 0 &&
+             (!('category' in data) || data.category is string) &&
+             (!('order' in data) || data.order is number) &&
+             (!('active' in data) || data.active is bool);
+    }
+
+    function isValidMensagem(data) {
+      return data.cliente_id is string &&
+             data.mentor_id is string &&
+             data.sender_id == request.auth.uid &&
+             data.content is string && data.content.size() > 0 && data.content.size() < 5000 &&
+             data.created_at is timestamp &&
+             (!('read' in data) || data.read is bool);
+    }
+
+    function isValidPlano(data) {
+      return data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
+             data.price is number && data.price >= 0 &&
+             (!('description' in data) || data.description is string) &&
+             (!('features' in data) || data.features is list) &&
+             (!('active' in data) || data.active is bool) &&
+             (!('interval' in data) || data.interval is string) &&
+             (!('popular' in data) || data.popular is bool) &&
+             (!('mp_price_id' in data) || data.mp_price_id is string) &&
+             (!('stripe_price_id' in data) || data.stripe_price_id is string);
+    }
+
+    function isValidLog(data) {
+      return data.userId == request.auth.uid &&
+             data.action is string &&
+             data.timestamp is timestamp;
+    }
+
+    // Rules
+    match /system_logs/{logId} {
+      allow read: if isAdmin();
+      allow create: if isAdmin() && isValidLog(request.resource.data);
+      allow update, delete: if false;
+    }
+
+    match /admins/{adminId} {
+      allow read: if isAdmin();
+      allow write: if isAdmin();
+    }
+
+    match /admin_audit_logs/{logId} {
+      allow read: if isAdmin();
+      allow create: if true; // Backend/Client can create, protected by isAdmin() if from client
+      allow update, delete: if false;
+    }
+
+    match /users/{userId} {
+      allow read: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
+      allow create: if isOwner(userId) && isValidUser(request.resource.data) && 
+                    request.resource.data.plan == 'free' && 
+                    (request.resource.data.role == 'user' || request.resource.data.role == 'client');
+      allow update: if (isOwner(userId) || isAdmin()) && 
+                    isValidUser(request.resource.data) &&
+                    (isAdmin() || (
+                      request.resource.data.plan == resource.data.plan &&
+                      request.resource.data.role == resource.data.role &&
+                      (!('stripeCustomerId' in resource.data) || request.resource.data.stripeCustomerId == resource.data.stripeCustomerId)
+                    ));
+
+      match /tokens/google {
+        allow read, write: if isOwner(userId);
+      }
+    }
+
+    match /rodas_da_vida/{rodaId} {
+      allow read: if isAuthenticated() && (resource.data.created_by == request.auth.uid || isClientOf(resource.data.cliente_id) || isAdmin());
+      allow create: if isAuthenticated() && isValidRoda(request.resource.data);
+      allow update, delete: if isDocOwner() || isAdmin();
+    }
+
+    match /metas_smart/{metaId} {
+      allow read: if isAuthenticated() && (resource.data.created_by == request.auth.uid || isClientOf(resource.data.cliente_id) || isAdmin());
+      allow create: if isAuthenticated() && isValidMeta(request.resource.data);
+      allow update: if (isDocOwner() || isAdmin()) && isValidMeta(request.resource.data);
+      allow delete: if isDocOwner() || isAdmin();
+    }
+
+    match /diarios_reflexao/{diarioId} {
+      allow read: if isAuthenticated() && (resource.data.created_by == request.auth.uid || (!resource.data.is_private && isAdmin()));
+      allow create: if isAuthenticated() && request.resource.data.created_by == request.auth.uid;
+      allow update, delete: if isDocOwner();
+    }
+
+    match /agendamentos/{agendamentoId} {
+      allow read: if isAuthenticated() && (resource.data.created_by == request.auth.uid || isClientOf(resource.data.cliente_id) || isAdmin());
+      allow create: if isAuthenticated() && isValidAgendamento(request.resource.data);
+      allow update: if (isDocOwner() || isAdmin()) && isValidAgendamento(request.resource.data);
+      allow delete: if isDocOwner() || isAdmin();
+    }
+
+    match /clientes/{clienteId} {
+      allow read: if isAuthenticated() && (resource.data.profissional_id == request.auth.uid || resource.data.user_id == request.auth.uid || isAdmin());
+      allow create: if isAuthenticated() && request.resource.data.profissional_id == request.auth.uid && isValidCliente(request.resource.data);
+      allow update: if (isProfissionalOwner() || isAdmin() || (isAuthenticated() && resource.data.user_id == request.auth.uid)) && isValidCliente(request.resource.data);
+      allow delete: if isProfissionalOwner() || isAdmin();
+
+      match /anexos/{anexoId} {
+        allow read: if isAuthenticated() && (get(/databases/$(database)/documents/clientes/$(clienteId)).data.profissional_id == request.auth.uid || isAdmin());
+        allow create: if isAuthenticated() && isValidAnexo(request.resource.data);
+        allow delete: if isAuthenticated() && (get(/databases/$(database)/documents/clientes/$(clienteId)).data.profissional_id == request.auth.uid || isAdmin());
+      }
+
+      match /professional_notes/{noteId} {
+        allow read: if isAuthenticated() && (get(/databases/$(database)/documents/clientes/$(clienteId)).data.profissional_id == request.auth.uid || isAdmin());
+        allow create, update: if isAuthenticated() && (get(/databases/$(database)/documents/clientes/$(clienteId)).data.profissional_id == request.auth.uid || isAdmin()) && isValidProfessionalNote(request.resource.data);
+        allow delete: if isAuthenticated() && (get(/databases/$(database)/documents/clientes/$(clienteId)).data.profissional_id == request.auth.uid || isAdmin());
+      }
+    }
+
+    match /analises_swot/{swotId} {
+      allow read: if isAuthenticated() && (resource.data.created_by == request.auth.uid || isClientOf(resource.data.cliente_id) || isAdmin());
+      allow create: if isAuthenticated() && isValidSwot(request.resource.data);
+      allow update: if (isDocOwner() || isAdmin()) && isValidSwot(request.resource.data);
+      allow delete: if isDocOwner() || isAdmin();
+    }
+
+    match /perfis_disc/{discId} {
+      allow read: if isAuthenticated() && (resource.data.created_by == request.auth.uid || isClientOf(resource.data.cliente_id) || isAdmin());
+      allow create: if isAuthenticated() && isValidDisc(request.resource.data);
+      allow update: if (isDocOwner() || isAdmin()) && isValidDisc(request.resource.data);
+      allow delete: if isDocOwner() || isAdmin();
+    }
+
+    match /valores_pessoais/{valorId} {
+      allow read: if isAuthenticated() && (resource.data.created_by == request.auth.uid || isClientOf(resource.data.cliente_id) || isAdmin());
+      allow create: if isAuthenticated() && isValidValores(request.resource.data);
+      allow update: if (isDocOwner() || isAdmin()) && isValidValores(request.resource.data);
+      allow delete: if isDocOwner() || isAdmin();
+    }
+
+    match /pdis/{pdiId} {
+      allow read: if isAuthenticated() && (resource.data.usuario_id == request.auth.uid || resource.data.gestor_id == request.auth.uid || isAdmin());
+      allow create: if isAuthenticated() && 
+                    (request.resource.data.usuario_id == request.auth.uid || request.resource.data.gestor_id == request.auth.uid || isAdmin()) &&
+                    isValidPdi(request.resource.data);
+      allow update: if isAuthenticated() && 
+                    (
+                      // Gestor/Admin can update anything if valid
+                      (resource.data.gestor_id == request.auth.uid || isAdmin()) ||
+                      // Collaborator can update if it's their PDI and it's in rascunho/ajuste_solicitado
+                      (resource.data.usuario_id == request.auth.uid && (resource.data.status == 'rascunho' || resource.data.status == 'ajuste_solicitado'))
+                    ) && isValidPdi(request.resource.data) &&
+                    request.resource.data.usuario_id == resource.data.usuario_id &&
+                    (!('created_at' in resource.data) || request.resource.data.created_at == resource.data.created_at);
+      allow delete: if isAuthenticated() && (resource.data.gestor_id == request.auth.uid || isAdmin());
+    }
+
+    match /pdi_metas/{metaId} {
+      allow read: if isPdiParticipant(resource.data.pdi_id);
+      allow create: if isPdiEditor(request.resource.data.pdi_id) && isValidPdiItem(request.resource.data);
+      allow update: if isPdiEditor(resource.data.pdi_id) && isValidPdiItem(request.resource.data) &&
+                    request.resource.data.pdi_id == resource.data.pdi_id &&
+                    (!('created_at' in resource.data) || request.resource.data.created_at == resource.data.created_at);
+      allow delete: if isPdiEditor(resource.data.pdi_id);
+    }
+
+    match /pdi_acoes/{acaoId} {
+      allow read: if isPdiParticipant(resource.data.pdi_id);
+      allow create: if isPdiParticipant(request.resource.data.pdi_id) && isValidPdiItem(request.resource.data);
+      allow update: if isPdiParticipant(resource.data.pdi_id) && isValidPdiItem(request.resource.data) &&
+                    request.resource.data.pdi_id == resource.data.pdi_id &&
+                    request.resource.data.meta_id == resource.data.meta_id &&
+                    (!('created_at' in resource.data) || request.resource.data.created_at == resource.data.created_at);
+      allow delete: if isPdiParticipant(resource.data.pdi_id);
+    }
+
+    match /pdi_feedbacks/{feedbackId} {
+      allow read: if isPdiParticipant(resource.data.pdi_id);
+      allow create: if isPdiParticipant(request.resource.data.pdi_id) && isValidPdiFeedback(request.resource.data);
+      allow update: if isAuthenticated() && resource.data.autor_id == request.auth.uid && 
+                    isValidPdiFeedback(request.resource.data) &&
+                    request.resource.data.pdi_id == resource.data.pdi_id &&
+                    request.resource.data.autor_id == resource.data.autor_id &&
+                    (!('data' in resource.data) || request.resource.data.data == resource.data.data);
+      allow delete: if isAuthenticated() && (resource.data.autor_id == request.auth.uid || isAdmin());
+    }
+
+    match /competencias/{competenciaId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    match /pdi_competencias/{pdiCompId} {
+      allow read: if isPdiParticipant(resource.data.pdi_id);
+      allow create: if isPdiEditor(request.resource.data.pdi_id) && isValidPdiCompetencia(request.resource.data);
+      allow update: if isPdiEditor(resource.data.pdi_id) && isValidPdiCompetencia(request.resource.data) && 
+                    request.resource.data.pdi_id == resource.data.pdi_id &&
+                    (!('created_at' in resource.data) || request.resource.data.created_at == resource.data.created_at);
+      allow delete: if isPdiEditor(resource.data.pdi_id);
+    }
+
+    match /notifications/{notificationId} {
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow create: if isAuthenticated() && isValidNotification(request.resource.data);
+      allow update: if isAuthenticated() && resource.data.userId == request.auth.uid && 
+                    request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
+      allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+    }
+
+    match /mail/{mailId} {
+      allow read: if isAuthenticated() && resource.data.to == request.auth.token.email;
+      allow create: if isAuthenticated() && request.resource.data.to == request.auth.token.email;
+      allow update, delete: if false; // Only the extension should update/delete
+    }
+
+    match /sessoes_mentoring/{sessaoId} {
+      allow read: if isAuthenticated() && (resource.data.created_by == request.auth.uid || isAdmin());
+      allow create: if isAuthenticated() && isValidSessao(request.resource.data);
+      allow update: if (isDocOwner() || isAdmin()) && isValidSessao(request.resource.data);
+      allow delete: if isDocOwner() || isAdmin();
+    }
+
+    match /avaliacoes_sessoes/{avaliacaoId} {
+      allow read: if isAuthenticated() && (resource.data.mentor_id == request.auth.uid || resource.data.cliente_id == request.auth.uid || isAdmin());
+      allow create: if isAuthenticated() && isValidAvaliacao(request.resource.data);
+      allow update, delete: if isAdmin();
+    }
+
+    match /invitations/{invitationId} {
+      allow read: if isAuthenticated() && (resource.data.invited_by == request.auth.uid || isAdmin());
+      allow create: if isAdmin() && isValidInvitation(request.resource.data);
+      allow update: if isAdmin() && isValidInvitation(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /faqs/{faqId} {
+      allow read: if true;
+      allow write: if isAdmin() && isValidFaq(request.resource.data);
+    }
+
+    match /mensagens/{mensagemId} {
+      allow read: if isAuthenticated() && (resource.data.cliente_id == request.auth.uid || resource.data.mentor_id == request.auth.uid || isClientOf(resource.data.cliente_id) || isAdmin());
+      allow create: if isAuthenticated() && isValidMensagem(request.resource.data);
+      allow update: if isAuthenticated() && (resource.data.mentor_id == request.auth.uid || resource.data.cliente_id == request.auth.uid) && 
+                    request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
+      allow delete: if isAdmin();
+    }
+
+    match /planos/{planoId} {
+      allow read: if true;
+      allow write: if isAdmin() && isValidPlano(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /revenue_history/{revenueId} {
+      allow read: if isAdmin();
+      allow write: if false; // Managed by server-side Admin SDK
+    }
+  }
+}

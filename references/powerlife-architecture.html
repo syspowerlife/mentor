@@ -1,0 +1,1174 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PowerLife — Arquitetura Técnica</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Sora:wght@300;400;600;700&display=swap');
+
+  :root {
+    --blue:   #2563EB;
+    --indigo: #4F46E5;
+    --teal:   #0F766E;
+    --amber:  #D97706;
+    --coral:  #DC4C3E;
+    --green:  #15803D;
+    --purple: #7C3AED;
+    --gray:   #64748B;
+    --bg:     #F8FAFC;
+    --surface:#FFFFFF;
+    --border: #E2E8F0;
+    --text:   #0F172A;
+    --muted:  #64748B;
+    --mono: 'IBM Plex Mono', monospace;
+    --sans: 'Sora', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--text);
+    font-size: 14px;
+    line-height: 1.7;
+  }
+
+  /* ── HEADER ── */
+  header {
+    background: linear-gradient(135deg, #0F172A 0%, #1E3A5F 50%, #1E1B4B 100%);
+    color: #fff;
+    padding: 48px 60px 40px;
+    position: relative;
+    overflow: hidden;
+  }
+  header::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+      90deg,
+      rgba(255,255,255,0.03) 0px,
+      rgba(255,255,255,0.03) 1px,
+      transparent 1px,
+      transparent 60px
+    );
+  }
+  .header-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 20px;
+    padding: 4px 14px;
+    font-size: 11px;
+    font-family: var(--mono);
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    margin-bottom: 20px;
+  }
+  header h1 {
+    font-size: 36px;
+    font-weight: 700;
+    letter-spacing: -.02em;
+    margin-bottom: 8px;
+  }
+  header h1 span { color: #60A5FA; }
+  header p { color: rgba(255,255,255,0.6); font-size: 15px; max-width: 640px; }
+  .meta-pills { display: flex; gap: 10px; margin-top: 24px; flex-wrap: wrap; }
+  .pill {
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 6px;
+    padding: 4px 12px;
+    font-size: 12px;
+    font-family: var(--mono);
+    color: #CBD5E1;
+  }
+
+  /* ── LAYOUT ── */
+  .container { max-width: 1080px; margin: 0 auto; padding: 40px 40px; }
+
+  /* ── SECTION ── */
+  section { margin-bottom: 48px; }
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid var(--border);
+  }
+  .section-icon {
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    flex-shrink: 0;
+  }
+  .section-header h2 { font-size: 18px; font-weight: 600; letter-spacing: -.01em; }
+  .section-header .tag {
+    margin-left: auto;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    background: var(--border);
+    padding: 2px 8px;
+    border-radius: 4px;
+  }
+
+  /* ── CARDS GRID ── */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+  .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  .grid-5 { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
+
+  /* ── CARD ── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+  }
+  .card-accent { border-top: 3px solid var(--blue); }
+  .card h3 { font-size: 13px; font-weight: 600; margin-bottom: 10px; }
+  .card p { font-size: 13px; color: var(--muted); line-height: 1.6; }
+
+  /* ── TECH BADGE ── */
+  .tech { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+  .badge {
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 3px 9px;
+    border-radius: 5px;
+    font-weight: 600;
+    letter-spacing: .03em;
+  }
+  .badge-blue   { background: #DBEAFE; color: #1D4ED8; }
+  .badge-indigo { background: #EDE9FE; color: #4338CA; }
+  .badge-teal   { background: #CCFBF1; color: #0F766E; }
+  .badge-amber  { background: #FEF3C7; color: #92400E; }
+  .badge-coral  { background: #FEE2E2; color: #991B1B; }
+  .badge-green  { background: #DCFCE7; color: #166534; }
+  .badge-purple { background: #F3E8FF; color: #6B21A8; }
+  .badge-gray   { background: #F1F5F9; color: #475569; }
+
+  /* ── TREE / FILE STRUCTURE ── */
+  .tree {
+    background: #0F172A;
+    color: #94A3B8;
+    border-radius: 12px;
+    padding: 24px 28px;
+    font-family: var(--mono);
+    font-size: 12.5px;
+    line-height: 2;
+    overflow-x: auto;
+  }
+  .tree .dir  { color: #60A5FA; font-weight: 600; }
+  .tree .file { color: #CBD5E1; }
+  .tree .note { color: #475569; }
+  .tree .hi   { color: #34D399; }
+  .tree .warn { color: #FBBF24; }
+
+  /* ── ROUTE TABLE ── */
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th {
+    background: #F1F5F9;
+    text-align: left;
+    padding: 10px 14px;
+    font-weight: 600;
+    font-size: 12px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    border-bottom: 2px solid var(--border);
+  }
+  td { padding: 10px 14px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  td code {
+    font-family: var(--mono);
+    font-size: 12px;
+    background: #F1F5F9;
+    padding: 2px 6px;
+    border-radius: 4px;
+    color: var(--indigo);
+  }
+
+  /* ── ENTITY ── */
+  .entity {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    font-size: 12.5px;
+  }
+  .entity-head {
+    padding: 10px 16px;
+    font-weight: 700;
+    font-size: 13px;
+    font-family: var(--mono);
+    border-bottom: 1px solid var(--border);
+  }
+  .entity-fields { padding: 8px 0; }
+  .entity-field {
+    display: flex;
+    justify-content: space-between;
+    padding: 4px 16px;
+    gap: 12px;
+  }
+  .entity-field:hover { background: #F8FAFC; }
+  .field-name { color: var(--text); font-family: var(--mono); }
+  .field-type { color: var(--teal); font-family: var(--mono); font-size: 11.5px; }
+  .field-pk  { color: var(--amber); font-weight: 600; }
+
+  /* ── FLOW STEP ── */
+  .flow { display: flex; flex-direction: column; gap: 0; }
+  .flow-step {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .flow-step:last-child { border-bottom: none; }
+  .flow-num {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700;
+    flex-shrink: 0;
+  }
+  .flow-step h4 { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+  .flow-step p  { font-size: 12.5px; color: var(--muted); }
+
+  /* ── COLORS ── */
+  .c-blue   { background-color: #EFF6FF; border-left: 4px solid var(--blue); }
+  .c-indigo { background-color: #EEF2FF; border-left: 4px solid var(--indigo); }
+  .c-teal   { background-color: #F0FDF4; border-left: 4px solid var(--teal); }
+  .c-amber  { background-color: #FFFBEB; border-left: 4px solid var(--amber); }
+  .c-coral  { background-color: #FFF5F5; border-left: 4px solid var(--coral); }
+  .c-purple { background-color: #FAF5FF; border-left: 4px solid var(--purple); }
+
+  /* ── CALLOUT ── */
+  .callout {
+    border-radius: 10px;
+    padding: 14px 18px;
+    font-size: 13px;
+    margin: 12px 0;
+  }
+  .callout strong { display: block; margin-bottom: 4px; font-size: 13px; }
+  .callout ul { padding-left: 18px; margin-top: 6px; }
+  .callout li { margin-bottom: 3px; color: inherit; }
+
+  /* ── COMPONENT LIST ── */
+  .comp-list { display: flex; flex-direction: column; gap: 8px; }
+  .comp-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+  .comp-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .comp-item span { font-size: 13px; font-weight: 500; }
+  .comp-item small { font-size: 12px; color: var(--muted); margin-left: auto; font-family: var(--mono); }
+
+  /* ── FOOTER ── */
+  footer {
+    text-align: center;
+    padding: 32px;
+    font-size: 12px;
+    color: var(--muted);
+    border-top: 1px solid var(--border);
+    font-family: var(--mono);
+  }
+
+  @media (max-width: 700px) {
+    .grid-2, .grid-3, .grid-4, .grid-5 { grid-template-columns: 1fr; }
+    .container { padding: 24px 20px; }
+    header { padding: 32px 24px 28px; }
+    header h1 { font-size: 26px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════
+     HEADER
+══════════════════════════════════════════ -->
+<header>
+  <div class="header-badge">
+    <span>📐</span>
+    <span>Documento de Arquitetura — v1.0</span>
+  </div>
+  <h1><span>PowerLife</span> — Arquitetura Técnica Completa</h1>
+  <p>Plataforma profissional de ferramentas para coaches e terapeutas. Documento de referência para desenvolvimento, estrutura de pastas, entidades de dados, rotas e padrões de componentes.</p>
+  <div class="meta-pills">
+    <span class="pill">React 18 + Vite</span>
+    <span class="pill">Tailwind CSS</span>
+    <span class="pill">shadcn/ui</span>
+    <span class="pill">Base44 SDK</span>
+    <span class="pill">React Query</span>
+    <span class="pill">React Router v6</span>
+    <span class="pill">Recharts</span>
+    <span class="pill">pt-BR</span>
+  </div>
+</header>
+
+<div class="container">
+
+<!-- ══════════════════════════════════════════
+     1. STACK TECNOLÓGICA
+══════════════════════════════════════════ -->
+<section>
+  <div class="section-header">
+    <div class="section-icon" style="background:#DBEAFE;">⚙️</div>
+    <h2>1. Stack Tecnológica</h2>
+    <span class="tag">dependencies</span>
+  </div>
+
+  <div class="grid-3">
+    <div class="card card-accent">
+      <h3>Frontend Core</h3>
+      <div class="tech">
+        <span class="badge badge-blue">react@18</span>
+        <span class="badge badge-blue">vite</span>
+        <span class="badge badge-indigo">react-router-dom@6</span>
+        <span class="badge badge-teal">tailwindcss</span>
+        <span class="badge badge-gray">shadcn/ui</span>
+        <span class="badge badge-gray">lucide-react</span>
+      </div>
+    </div>
+    <div class="card card-accent" style="border-top-color: var(--teal);">
+      <h3>Dados & Estado</h3>
+      <div class="tech">
+        <span class="badge badge-teal">@tanstack/react-query</span>
+        <span class="badge badge-teal">react context api</span>
+        <span class="badge badge-amber">@base44/sdk</span>
+        <span class="badge badge-gray">custom hooks</span>
+      </div>
+    </div>
+    <div class="card card-accent" style="border-top-color: var(--purple);">
+      <h3>Visualizações</h3>
+      <div class="tech">
+        <span class="badge badge-purple">recharts</span>
+        <span class="badge badge-indigo">AreaChart</span>
+        <span class="badge badge-indigo">BarChart</span>
+        <span class="badge badge-indigo">RadarChart</span>
+        <span class="badge badge-indigo">PieChart</span>
+        <span class="badge badge-indigo">LineChart</span>
+      </div>
+    </div>
+  </div>
+
+  <div style="margin-top: 16px;">
+    <div class="callout c-amber">
+      <strong>⚠️ Configuração obrigatória de i18n</strong>
+      Adicionar em <code style="font-family: monospace; font-size: 12px; background: rgba(0,0,0,0.06); padding: 1px 5px; border-radius: 3px;">index.html</code>:
+      <code style="display: block; background: #1E293B; color: #7DD3FC; padding: 10px 14px; border-radius: 6px; margin-top: 8px; font-size: 12px; font-family: monospace;">
+        &lt;html lang="pt-BR"&gt;<br>
+        &lt;meta name="google" content="notranslate"&gt;
+      </code>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════
+     2. ESTRUTURA DE PASTAS
+══════════════════════════════════════════ -->
+<section>
+  <div class="section-header">
+    <div class="section-icon" style="background:#F0FDF4;">📁</div>
+    <h2>2. Estrutura de Pastas</h2>
+    <span class="tag">file system</span>
+  </div>
+
+  <div class="tree">
+<span class="dir">powerlife/</span>
+├── <span class="dir">public/</span>
+│   └── <span class="file">favicon.ico</span>
+├── <span class="dir">src/</span>
+│   │
+│   ├── <span class="dir">api/</span>                         <span class="note"># Camada de acesso ao Base44 SDK</span>
+│   │   ├── <span class="hi">entities.js</span>                <span class="note"># Entidades: Coach, Client, Goal...</span>
+│   │   └── <span class="hi">integrations.js</span>            <span class="note"># Email, notificações, storage</span>
+│   │
+│   ├── <span class="dir">components/</span>
+│   │   ├── <span class="hi">Layout.jsx</span>                 <span class="note"># Layout principal — sidebar + header mobile</span>
+│   │   ├── <span class="hi">FooterNav.jsx</span>              <span class="note"># Footer navigation mobile (fixed bottom)</span>
+│   │   ├── <span class="dir">ui/</span>                        <span class="note"># shadcn/ui re-exports e overrides</span>
+│   │   │   ├── <span class="file">button.jsx</span>
+│   │   │   ├── <span class="file">card.jsx</span>
+│   │   │   ├── <span class="file">sheet.jsx</span>
+│   │   │   ├── <span class="file">sidebar.jsx</span>
+│   │   │   ├── <span class="file">collapsible.jsx</span>
+│   │   │   └── <span class="file">...outros</span>
+│   │   └── <span class="dir">shared/</span>                    <span class="note"># Componentes de domínio compartilhados</span>
+│   │       ├── <span class="file">ClientCard.jsx</span>
+│   │       ├── <span class="file">GoalItem.jsx</span>
+│   │       ├── <span class="file">EmptyState.jsx</span>
+│   │       └── <span class="file">LoadingSpinner.jsx</span>
+│   │
+│   ├── <span class="dir">pages/</span>
+│   │   ├── <span class="hi">Home.jsx</span>                   <span class="note"># Landing / apresentação</span>
+│   │   ├── <span class="hi">Dashboard.jsx</span>              <span class="note"># Métricas gerais + gráficos</span>
+│   │   ├── <span class="hi">Clients.jsx</span>                <span class="note"># Lista e gestão de clientes</span>
+│   │   ├── <span class="hi">ClientDetail.jsx</span>           <span class="note"># Detalhe de cliente individual</span>
+│   │   ├── <span class="hi">Assessments.jsx</span>            <span class="note"># Lista de avaliações</span>
+│   │   ├── <span class="hi">Profile.jsx</span>                <span class="note"># Perfil do coach</span>
+│   │   ├── <span class="hi">Settings.jsx</span>               <span class="note"># Configurações da plataforma</span>
+│   │   ├── <span class="warn">Admin.jsx</span>                  <span class="note"># ⚠ Apenas role=admin</span>
+│   │   └── <span class="dir">tools/</span>                     <span class="note"># 5 ferramentas de coaching</span>
+│   │       ├── <span class="hi">RodaDaVida.jsx</span>
+│   │       ├── <span class="hi">Planejador.jsx</span>
+│   │       ├── <span class="hi">DiarioReflexao.jsx</span>
+│   │       ├── <span class="hi">AcompanhamentoProgresso.jsx</span>
+│   │       └── <span class="hi">AvaliacaoCliente.jsx</span>
+│   │
+│   ├── <span class="dir">hooks/</span>                         <span class="note"># Custom hooks</span>
+│   │   ├── <span class="file">useAuth.js</span>
+│   │   ├── <span class="file">useCoach.js</span>
+│   │   ├── <span class="file">useClients.js</span>
+│   │   ├── <span class="file">useGoals.js</span>
+│   │   └── <span class="file">useAssessments.js</span>
+│   │
+│   ├── <span class="dir">lib/</span>                           <span class="note"># Utilitários e helpers</span>
+│   │   ├── <span class="file">utils.js</span>                   <span class="note"># cn(), formatDate(), formatBRL()</span>
+│   │   ├── <span class="file">constants.js</span>               <span class="note"># NAV_ITEMS, TOOL_LIST, ROLES</span>
+│   │   └── <span class="file">chartTheme.js</span>             <span class="note"># Paleta e config padrão Recharts</span>
+│   │
+│   ├── <span class="dir">context/</span>
+│   │   ├── <span class="file">AuthContext.jsx</span>
+│   │   └── <span class="file">ThemeContext.jsx</span>
+│   │
+│   ├── <span class="hi">App.jsx</span>                        <span class="note"># Router + QueryClientProvider</span>
+│   └── <span class="hi">main.jsx</span>                       <span class="note"># Entry point</span>
+│
+├── <span class="file">index.html</span>                         <span class="note"># lang="pt-BR" + notranslate meta</span>
+├── <span class="file">tailwind.config.js</span>
+├── <span class="file">vite.config.js</span>
+└── <span class="file">package.json</span>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════
+     3. SISTEMA DE ROTAS
+══════════════════════════════════════════ -->
+<section>
+  <div class="section-header">
+    <div class="section-icon" style="background:#EDE9FE;">🔀</div>
+    <h2>3. Sistema de Rotas (React Router v6)</h2>
+    <span class="tag">routing</span>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Rota</th>
+        <th>Componente</th>
+        <th>Proteção</th>
+        <th>Descrição</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>/</code></td>
+        <td><code>Home.jsx</code></td>
+        <td><span class="badge badge-green">público</span></td>
+        <td>Landing page com apresentação da plataforma</td>
+      </tr>
+      <tr>
+        <td><code>/dashboard</code></td>
+        <td><code>Dashboard.jsx</code></td>
+        <td><span class="badge badge-blue">auth</span></td>
+        <td>Painel de métricas gerais e gráficos do coach</td>
+      </tr>
+      <tr>
+        <td><code>/clientes</code></td>
+        <td><code>Clients.jsx</code></td>
+        <td><span class="badge badge-blue">auth</span></td>
+        <td>Listagem, busca e criação de clientes</td>
+      </tr>
+      <tr>
+        <td><code>/clientes/:id</code></td>
+        <td><code>ClientDetail.jsx</code></td>
+        <td><span class="badge badge-blue">auth</span></td>
+        <td>Histórico, metas e avaliações de cliente específico</td>
+      </tr>
+      <tr>
+        <td><code>/ferramentas/roda-da-vida</code></td>
+        <td><code>tools/RodaDaVida.jsx</code></td>
+        <td><span class="badge badge-blue">auth</span></td>
+        <td>Avaliação RadarChart com 8 áreas de vida</td>
+      </tr>
+      <tr>
+        <td><code>/ferramentas/planejador</code></td>
+        <td><code>tools/Planejador.jsx</code></td>
+        <td><span class="badge badge-blue">auth</span></td>
+        <td>Criação e acompanhamento de metas SMART</td>
+      </tr>
+      <tr>
+        <td><code>/ferramentas/diario</code></td>
+        <td><code>tools/DiarioReflexao.jsx</code></td>
+        <td><span class="badge badge-blue">auth</span></td>
+        <td>Diário de reflexões com indicador de humor</td>
+      </tr>
+      <tr>
+        <td><code>/ferramentas/progresso</code></td>
+        <td><code>tools/AcompanhamentoProgresso.jsx</code></td>
+        <td><span class="badge badge-blue">auth</span></td>
+        <td>Evolução temporal em AreaChart + LineChart</td>
+      </tr>
+      <tr>
+        <td><code>/ferramentas/avaliacao</code></td>
+        <td><code>tools/AvaliacaoCliente.jsx</code></td>
+        <td><span class="badge badge-blue">auth</span></td>
+        <td>Questionários e scoring de clientes</td>
+      </tr>
+      <tr>
+        <td><code>/avaliacoes</code></td>
+        <td><code>Assessments.jsx</code></td>
+        <td><span class="badge badge-blue">auth</span></td>
+        <td>Visão geral de todas as avaliações realizadas</td>
+      </tr>
+      <tr>
+        <td><code>/perfil</code></td>
+        <td><code>Profile.jsx</code></td>
+        <td><span class="badge badge-blue">auth</span></td>
+        <td>Dados e configurações do coach autenticado</td>
+      </tr>
+      <tr>
+        <td><code>/configuracoes</code></td>
+        <td><code>Settings.jsx</code></td>
+        <td><span class="badge badge-blue">auth</span></td>
+        <td>Preferências da plataforma</td>
+      </tr>
+      <tr>
+        <td><code>/admin</code></td>
+        <td><code>Admin.jsx</code></td>
+        <td><span class="badge badge-coral">role=admin</span></td>
+        <td>Painel administrativo — visível apenas para admins</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="callout c-blue" style="margin-top: 14px;">
+    <strong>Padrão de proteção de rotas</strong>
+    Usar <code style="font-family: monospace; font-size: 12px;">ProtectedRoute</code> wrapper no <code style="font-family: monospace; font-size: 12px;">App.jsx</code>. Rotas <code style="font-family: monospace; font-size: 12px;">role=admin</code> devem verificar <code style="font-family: monospace; font-size: 12px;">user.role === 'admin'</code> via <code style="font-family: monospace; font-size: 12px;">useAuth()</code> e redirecionar para <code style="font-family: monospace; font-size: 12px;">/dashboard</code> em caso negativo.
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════
+     4. LAYOUT & NAVEGAÇÃO
+══════════════════════════════════════════ -->
+<section>
+  <div class="section-header">
+    <div class="section-icon" style="background:#CCFBF1;">🖥️</div>
+    <h2>4. Layout Principal — components/Layout.jsx</h2>
+    <span class="tag">layout</span>
+  </div>
+
+  <div class="grid-2">
+    <!-- Sidebar Desktop -->
+    <div class="card">
+      <h3 style="color: var(--blue);">Sidebar Desktop <span class="badge badge-blue" style="font-size: 10px;">lg:flex hidden</span></h3>
+      <div class="comp-list" style="margin-top: 12px;">
+        <div class="comp-item">
+          <div class="comp-dot" style="background: var(--blue);"></div>
+          <span>Logo PowerLife + imagem remota</span>
+          <small>SidebarHeader</small>
+        </div>
+        <div class="comp-item">
+          <div class="comp-dot" style="background: var(--indigo);"></div>
+          <span>Início, Dashboard, Clientes</span>
+          <small>SidebarMenu</small>
+        </div>
+        <div class="comp-item">
+          <div class="comp-dot" style="background: var(--purple);"></div>
+          <span>Ferramentas (colapsável com 5 items)</span>
+          <small>Collapsible</small>
+        </div>
+        <div class="comp-item">
+          <div class="comp-dot" style="background: var(--teal);"></div>
+          <span>Avaliações, Perfil, Configurações</span>
+          <small>SidebarMenu</small>
+        </div>
+        <div class="comp-item">
+          <div class="comp-dot" style="background: var(--coral);"></div>
+          <span>Painel Admin (role=admin)</span>
+          <small>conditional</small>
+        </div>
+      </div>
+    </div>
+
+    <!-- Header + FooterNav Mobile -->
+    <div class="card">
+      <h3 style="color: var(--teal);">Mobile — Header + FooterNav <span class="badge badge-teal" style="font-size: 10px;">lg:hidden</span></h3>
+      <div class="comp-list" style="margin-top: 12px;">
+        <div class="comp-item">
+          <div class="comp-dot" style="background: var(--teal);"></div>
+          <span>Header: Logo + Nome + SidebarTrigger</span>
+          <small>fixed top</small>
+        </div>
+        <div class="comp-item">
+          <div class="comp-dot" style="background: var(--blue);"></div>
+          <span>FooterNav: 5 ícones na barra inferior</span>
+          <small>fixed bottom-0</small>
+        </div>
+        <div class="comp-item">
+          <div class="comp-dot" style="background: var(--amber);"></div>
+          <span>"Ferramentas" → Sheet bottom 2 colunas</span>
+          <small>Sheet</small>
+        </div>
+        <div class="comp-item">
+          <div class="comp-dot" style="background: var(--purple);"></div>
+          <span>"Menu" → Sheet lateral direito completo</span>
+          <small>Sheet side=right</small>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="margin-top: 16px;">
+    <div class="card">
+      <h3>FooterNav Mobile — 5 Ícones</h3>
+      <div class="grid-5" style="margin-top: 12px;">
+        <div style="text-align:center; padding: 10px; background: #F8FAFC; border-radius: 8px; border: 1px solid var(--border);">
+          <div style="font-size: 20px;">🏠</div>
+          <div style="font-size: 11px; margin-top: 4px; color: var(--muted);">Início</div>
+        </div>
+        <div style="text-align:center; padding: 10px; background: #F8FAFC; border-radius: 8px; border: 1px solid var(--border);">
+          <div style="font-size: 20px;">📊</div>
+          <div style="font-size: 11px; margin-top: 4px; color: var(--muted);">Dashboard</div>
+        </div>
+        <div style="text-align:center; padding: 10px; background: #EFF6FF; border-radius: 8px; border: 1px solid #BFDBFE;">
+          <div style="font-size: 20px;">🛠️</div>
+          <div style="font-size: 11px; margin-top: 4px; color: var(--blue);">Ferramentas</div>
+          <div style="font-size: 10px; color: var(--blue);">Sheet ↑</div>
+        </div>
+        <div style="text-align:center; padding: 10px; background: #F8FAFC; border-radius: 8px; border: 1px solid var(--border);">
+          <div style="font-size: 20px;">📋</div>
+          <div style="font-size: 11px; margin-top: 4px; color: var(--muted);">Avaliações</div>
+        </div>
+        <div style="text-align:center; padding: 10px; background: #F8FAFC; border-radius: 8px; border: 1px solid var(--border);">
+          <div style="font-size: 20px;">☰</div>
+          <div style="font-size: 11px; margin-top: 4px; color: var(--muted);">Menu</div>
+          <div style="font-size: 10px; color: var(--muted);">Sheet →</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="margin-top: 16px;">
+    <div class="card">
+      <h3>Footer Desktop — 4 Colunas <span class="badge badge-gray" style="font-size: 10px;">hidden lg:block</span></h3>
+      <div class="grid-4" style="margin-top: 12px;">
+        <div>
+          <div style="font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 8px;">Sobre</div>
+          <div style="font-size: 12px; color: var(--muted); line-height: 2;">Sobre o PowerLife<br>Nossa Missão<br>Contato</div>
+        </div>
+        <div>
+          <div style="font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 8px;">Ferramentas</div>
+          <div style="font-size: 12px; color: var(--muted); line-height: 2;">Roda da Vida<br>Planejador<br>Diário · Progresso</div>
+        </div>
+        <div>
+          <div style="font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 8px;">Recursos</div>
+          <div style="font-size: 12px; color: var(--muted); line-height: 2;">Blog<br>Tutoriais<br>API Docs</div>
+        </div>
+        <div>
+          <div style="font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 8px;">Suporte</div>
+          <div style="font-size: 12px; color: var(--muted); line-height: 2;">FAQ<br>Help Center<br>Status</div>
+        </div>
+      </div>
+      <div style="margin-top: 12px; font-size: 12px; color: var(--muted); border-top: 1px solid var(--border); padding-top: 10px;">
+        © <span id="year"></span> PowerLife. Ferramentas de Coaching. Todos os direitos reservados.
+        <script>document.getElementById('year').textContent = new Date().getFullYear();</script>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════
+     5. FERRAMENTAS DE COACHING
+══════════════════════════════════════════ -->
+<section>
+  <div class="section-header">
+    <div class="section-icon" style="background:#FEF3C7;">🛠️</div>
+    <h2>5. As 5 Ferramentas de Coaching</h2>
+    <span class="tag">tools</span>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <h3>🎯 Roda da Vida — RodaDaVida.jsx</h3>
+      <p style="margin-bottom: 10px;">Avaliação das 8 áreas de vida do cliente usando RadarChart interativo. Permite comparar estado atual vs. estado ideal.</p>
+      <div class="tech">
+        <span class="badge badge-purple">RadarChart</span>
+        <span class="badge badge-blue">Assessment entity</span>
+        <span class="badge badge-gray">8 dimensões</span>
+      </div>
+      <ul style="margin-top: 10px; padding-left: 18px; font-size: 12.5px; color: var(--muted); line-height: 2;">
+        <li>Carreira · Finanças · Saúde · Relacionamentos</li>
+        <li>Família · Lazer · Desenvolvimento · Espiritualidade</li>
+        <li>Slider 0–10 por área + score geral calculado</li>
+        <li>Histórico de sessões com evolução temporal</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h3>📌 Planejador de Metas — Planejador.jsx</h3>
+      <p style="margin-bottom: 10px;">Criação e acompanhamento de metas no formato SMART. Kanban de status com drag-and-drop.</p>
+      <div class="tech">
+        <span class="badge badge-amber">BarChart</span>
+        <span class="badge badge-blue">Goal entity</span>
+        <span class="badge badge-gray">SMART</span>
+      </div>
+      <ul style="margin-top: 10px; padding-left: 18px; font-size: 12.5px; color: var(--muted); line-height: 2;">
+        <li>Status: Pendente → Em Andamento → Concluída</li>
+        <li>Prazo, responsável, indicadores de sucesso</li>
+        <li>Gráfico de metas por mês (BarChart)</li>
+        <li>Categorização por área de vida</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h3>📓 Diário de Reflexão — DiarioReflexao.jsx</h3>
+      <p style="margin-bottom: 10px;">Registro de reflexões diárias com indicador de humor, prompts guiados e busca por data.</p>
+      <div class="tech">
+        <span class="badge badge-teal">LineChart</span>
+        <span class="badge badge-blue">JournalEntry entity</span>
+        <span class="badge badge-gray">humor tracking</span>
+      </div>
+      <ul style="margin-top: 10px; padding-left: 18px; font-size: 12.5px; color: var(--muted); line-height: 2;">
+        <li>Escala de humor 1–5 com emoji</li>
+        <li>Prompts de coaching pré-definidos</li>
+        <li>Evolução do humor em LineChart</li>
+        <li>Tags personalizáveis por entrada</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h3>📈 Progresso — AcompanhamentoProgresso.jsx</h3>
+      <p style="margin-bottom: 10px;">Dashboard de evolução do cliente com múltiplos indicadores e comparação entre períodos.</p>
+      <div class="tech">
+        <span class="badge badge-blue">AreaChart</span>
+        <span class="badge badge-indigo">PieChart</span>
+        <span class="badge badge-blue">Progress entity</span>
+      </div>
+      <ul style="margin-top: 10px; padding-left: 18px; font-size: 12.5px; color: var(--muted); line-height: 2;">
+        <li>AreaChart de evolução semanal/mensal</li>
+        <li>PieChart de distribuição de categorias</li>
+        <li>KPIs: sessões, metas, score médio</li>
+        <li>Exportar relatório em PDF (futuro)</li>
+      </ul>
+    </div>
+
+    <div class="card" style="grid-column: span 2;">
+      <h3>📝 Avaliação de Cliente — AvaliacaoCliente.jsx</h3>
+      <p style="margin-bottom: 10px;">Questionários customizáveis com scoring automático, histórico de respostas e comparação entre avaliações.</p>
+      <div class="tech">
+        <span class="badge badge-purple">RadarChart</span>
+        <span class="badge badge-blue">Assessment entity</span>
+        <span class="badge badge-amber">questionários</span>
+        <span class="badge badge-gray">scoring automático</span>
+      </div>
+      <div class="grid-3" style="margin-top: 12px;">
+        <div style="background: #F8FAFC; border-radius: 8px; padding: 12px; border: 1px solid var(--border);">
+          <div style="font-weight: 600; font-size: 12.5px; margin-bottom: 4px;">Tipos de questão</div>
+          <div style="font-size: 12px; color: var(--muted);">Escala Likert (1–5), múltipla escolha, texto livre, sim/não</div>
+        </div>
+        <div style="background: #F8FAFC; border-radius: 8px; padding: 12px; border: 1px solid var(--border);">
+          <div style="font-weight: 600; font-size: 12.5px; margin-bottom: 4px;">Templates prontos</div>
+          <div style="font-size: 12px; color: var(--muted);">Roda da Vida, Valores, Propósito de Vida, Autossabotagem</div>
+        </div>
+        <div style="background: #F8FAFC; border-radius: 8px; padding: 12px; border: 1px solid var(--border);">
+          <div style="font-weight: 600; font-size: 12.5px; margin-bottom: 4px;">Histórico comparativo</div>
+          <div style="font-size: 12px; color: var(--muted);">Comparação entre avaliações no RadarChart com sobreposição de períodos</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════
+     6. ENTIDADES DE DADOS
+══════════════════════════════════════════ -->
+<section>
+  <div class="section-header">
+    <div class="section-icon" style="background:#FFF5F5;">🗄️</div>
+    <h2>6. Modelo de Dados — Entidades Base44</h2>
+    <span class="tag">data model</span>
+  </div>
+
+  <div class="grid-3">
+
+    <div class="entity">
+      <div class="entity-head" style="background: #EFF6FF; color: #1D4ED8;">Coach</div>
+      <div class="entity-fields">
+        <div class="entity-field"><span class="field-name field-pk">id</span><span class="field-type">uuid PK</span></div>
+        <div class="entity-field"><span class="field-name">email</span><span class="field-type">string</span></div>
+        <div class="entity-field"><span class="field-name">full_name</span><span class="field-type">string</span></div>
+        <div class="entity-field"><span class="field-name">avatar_url</span><span class="field-type">url?</span></div>
+        <div class="entity-field"><span class="field-name">role</span><span class="field-type">'coach'|'admin'</span></div>
+        <div class="entity-field"><span class="field-name">bio</span><span class="field-type">text?</span></div>
+        <div class="entity-field"><span class="field-name">specialties</span><span class="field-type">string[]</span></div>
+        <div class="entity-field"><span class="field-name">created_at</span><span class="field-type">timestamp</span></div>
+      </div>
+    </div>
+
+    <div class="entity">
+      <div class="entity-head" style="background: #F0FDF4; color: #166534;">Client</div>
+      <div class="entity-fields">
+        <div class="entity-field"><span class="field-name field-pk">id</span><span class="field-type">uuid PK</span></div>
+        <div class="entity-field"><span class="field-name">coach_id</span><span class="field-type">uuid FK → Coach</span></div>
+        <div class="entity-field"><span class="field-name">full_name</span><span class="field-type">string</span></div>
+        <div class="entity-field"><span class="field-name">email</span><span class="field-type">string</span></div>
+        <div class="entity-field"><span class="field-name">phone</span><span class="field-type">string?</span></div>
+        <div class="entity-field"><span class="field-name">status</span><span class="field-type">'ativo'|'inativo'</span></div>
+        <div class="entity-field"><span class="field-name">start_date</span><span class="field-type">date</span></div>
+        <div class="entity-field"><span class="field-name">tags</span><span class="field-type">string[]</span></div>
+      </div>
+    </div>
+
+    <div class="entity">
+      <div class="entity-head" style="background: #EDE9FE; color: #4338CA;">Assessment</div>
+      <div class="entity-fields">
+        <div class="entity-field"><span class="field-name field-pk">id</span><span class="field-type">uuid PK</span></div>
+        <div class="entity-field"><span class="field-name">client_id</span><span class="field-type">uuid FK → Client</span></div>
+        <div class="entity-field"><span class="field-name">coach_id</span><span class="field-type">uuid FK → Coach</span></div>
+        <div class="entity-field"><span class="field-name">type</span><span class="field-type">'roda'|'custom'</span></div>
+        <div class="entity-field"><span class="field-name">scores</span><span class="field-type">json</span></div>
+        <div class="entity-field"><span class="field-name">total_score</span><span class="field-type">number</span></div>
+        <div class="entity-field"><span class="field-name">notes</span><span class="field-type">text?</span></div>
+        <div class="entity-field"><span class="field-name">session_date</span><span class="field-type">date</span></div>
+      </div>
+    </div>
+
+    <div class="entity">
+      <div class="entity-head" style="background: #FFFBEB; color: #92400E;">Goal</div>
+      <div class="entity-fields">
+        <div class="entity-field"><span class="field-name field-pk">id</span><span class="field-type">uuid PK</span></div>
+        <div class="entity-field"><span class="field-name">client_id</span><span class="field-type">uuid FK → Client</span></div>
+        <div class="entity-field"><span class="field-name">title</span><span class="field-type">string</span></div>
+        <div class="entity-field"><span class="field-name">description</span><span class="field-type">text</span></div>
+        <div class="entity-field"><span class="field-name">area</span><span class="field-type">string (roda dim.)</span></div>
+        <div class="entity-field"><span class="field-name">status</span><span class="field-type">'pendente'|'andamento'|'concluida'</span></div>
+        <div class="entity-field"><span class="field-name">due_date</span><span class="field-type">date</span></div>
+        <div class="entity-field"><span class="field-name">progress_pct</span><span class="field-type">number 0–100</span></div>
+      </div>
+    </div>
+
+    <div class="entity">
+      <div class="entity-head" style="background: #CCFBF1; color: #0F766E;">JournalEntry</div>
+      <div class="entity-fields">
+        <div class="entity-field"><span class="field-name field-pk">id</span><span class="field-type">uuid PK</span></div>
+        <div class="entity-field"><span class="field-name">client_id</span><span class="field-type">uuid FK → Client</span></div>
+        <div class="entity-field"><span class="field-name">entry_date</span><span class="field-type">date</span></div>
+        <div class="entity-field"><span class="field-name">mood</span><span class="field-type">number 1–5</span></div>
+        <div class="entity-field"><span class="field-name">content</span><span class="field-type">text</span></div>
+        <div class="entity-field"><span class="field-name">prompt_used</span><span class="field-type">string?</span></div>
+        <div class="entity-field"><span class="field-name">tags</span><span class="field-type">string[]</span></div>
+        <div class="entity-field"><span class="field-name">is_private</span><span class="field-type">boolean</span></div>
+      </div>
+    </div>
+
+    <div class="entity">
+      <div class="entity-head" style="background: #FFF5F5; color: #991B1B;">Progress</div>
+      <div class="entity-fields">
+        <div class="entity-field"><span class="field-name field-pk">id</span><span class="field-type">uuid PK</span></div>
+        <div class="entity-field"><span class="field-name">client_id</span><span class="field-type">uuid FK → Client</span></div>
+        <div class="entity-field"><span class="field-name">metric_name</span><span class="field-type">string</span></div>
+        <div class="entity-field"><span class="field-name">metric_value</span><span class="field-type">number</span></div>
+        <div class="entity-field"><span class="field-name">unit</span><span class="field-type">string?</span></div>
+        <div class="entity-field"><span class="field-name">recorded_at</span><span class="field-type">timestamp</span></div>
+        <div class="entity-field"><span class="field-name">category</span><span class="field-type">string</span></div>
+        <div class="entity-field"><span class="field-name">notes</span><span class="field-type">text?</span></div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════
+     7. CAMADA DE ESTADO
+══════════════════════════════════════════ -->
+<section>
+  <div class="section-header">
+    <div class="section-icon" style="background:#CCFBF1;">⚡</div>
+    <h2>7. Camada de Estado e Dados</h2>
+    <span class="tag">state management</span>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <h3>React Query — Padrões por entidade</h3>
+      <div class="flow" style="margin-top: 8px;">
+        <div class="flow-step">
+          <div class="flow-num" style="background:#DBEAFE; color:#1D4ED8;">Q</div>
+          <div>
+            <h4>useQuery (leitura)</h4>
+            <p>Listagens com paginação e cache automático. Ex: <code style="font-family: monospace; font-size: 11px;">useQuery(['clients', coachId], fetchClients)</code></p>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-num" style="background:#DCFCE7; color:#166534;">M</div>
+          <div>
+            <h4>useMutation (escrita)</h4>
+            <p>Criação/edição com invalidação de cache. Usar <code style="font-family: monospace; font-size: 11px;">onSuccess: () => queryClient.invalidateQueries</code></p>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-num" style="background:#F3E8FF; color:#6B21A8;">O</div>
+          <div>
+            <h4>Optimistic updates</h4>
+            <p>Para ações de UI imediata (toggle status meta, registro de humor) usar <code style="font-family: monospace; font-size: 11px;">onMutate</code> + rollback em <code style="font-family: monospace; font-size: 11px;">onError</code></p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Context API — Dois contextos globais</h3>
+      <div style="margin-top: 12px;">
+        <div class="callout c-blue" style="margin-bottom: 10px;">
+          <strong>AuthContext</strong>
+          <ul>
+            <li><code style="font-family:monospace;font-size:11px;">user</code> — objeto do coach autenticado</li>
+            <li><code style="font-family:monospace;font-size:11px;">role</code> — 'coach' | 'admin'</li>
+            <li><code style="font-family:monospace;font-size:11px;">isLoading</code> — estado de carregamento</li>
+            <li><code style="font-family:monospace;font-size:11px;">logout()</code> — Base44 auth.logout</li>
+          </ul>
+        </div>
+        <div class="callout c-purple">
+          <strong>ThemeContext</strong>
+          <ul>
+            <li><code style="font-family:monospace;font-size:11px;">colorScheme</code> — 'light' | 'dark'</li>
+            <li><code style="font-family:monospace;font-size:11px;">toggleTheme()</code> — persiste em localStorage</li>
+            <li>Gradiente: <code style="font-family:monospace;font-size:11px;">slate-50 via blue-50 to indigo-50</code></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="margin-top: 16px;">
+    <div class="card">
+      <h3>Custom Hooks — Padrão recomendado</h3>
+      <div class="grid-3" style="margin-top: 12px;">
+        <div style="background: #F8FAFC; border-radius: 8px; padding: 12px; border: 1px solid var(--border); font-family: monospace; font-size: 11.5px; line-height: 1.8; color: #334155;">
+          <div style="color: var(--blue); font-weight: 600; margin-bottom: 6px;">useClients.js</div>
+          <div><span style="color: var(--purple);">export</span> <span style="color: var(--teal);">function</span> <span style="color: var(--amber);">useClients</span>() {</div>
+          <div style="padding-left: 12px;"><span style="color: var(--purple);">const</span> {user} = <span style="color: var(--teal);">useAuth</span>()</div>
+          <div style="padding-left: 12px;"><span style="color: var(--purple);">return</span> <span style="color: var(--teal);">useQuery</span>({</div>
+          <div style="padding-left: 24px;">queryKey: ['clients', user.id],</div>
+          <div style="padding-left: 24px;">queryFn: () =&gt; <span style="color: var(--teal);">fetchClients</span>()</div>
+          <div style="padding-left: 12px;">})</div>
+          <div>}</div>
+        </div>
+        <div style="background: #F8FAFC; border-radius: 8px; padding: 12px; border: 1px solid var(--border); font-family: monospace; font-size: 11.5px; line-height: 1.8; color: #334155;">
+          <div style="color: var(--blue); font-weight: 600; margin-bottom: 6px;">useGoals.js</div>
+          <div><span style="color: var(--purple);">export</span> <span style="color: var(--teal);">function</span> <span style="color: var(--amber);">useGoals</span>(clientId) {</div>
+          <div style="padding-left: 12px;"><span style="color: var(--purple);">return</span> <span style="color: var(--teal);">useQuery</span>({</div>
+          <div style="padding-left: 24px;">queryKey: ['goals', clientId],</div>
+          <div style="padding-left: 24px;">queryFn: () =&gt; <span style="color: var(--teal);">fetchGoals</span>(clientId),</div>
+          <div style="padding-left: 24px;">enabled: !!clientId</div>
+          <div style="padding-left: 12px;">})</div>
+          <div>}</div>
+        </div>
+        <div style="background: #F8FAFC; border-radius: 8px; padding: 12px; border: 1px solid var(--border); font-family: monospace; font-size: 11.5px; line-height: 1.8; color: #334155;">
+          <div style="color: var(--blue); font-weight: 600; margin-bottom: 6px;">useCreateGoal.js</div>
+          <div><span style="color: var(--purple);">export</span> <span style="color: var(--teal);">function</span> <span style="color: var(--amber);">useCreateGoal</span>() {</div>
+          <div style="padding-left: 12px;"><span style="color: var(--purple);">const</span> qc = <span style="color: var(--teal);">useQueryClient</span>()</div>
+          <div style="padding-left: 12px;"><span style="color: var(--purple);">return</span> <span style="color: var(--teal);">useMutation</span>({</div>
+          <div style="padding-left: 24px;">mutationFn: createGoal,</div>
+          <div style="padding-left: 24px;">onSuccess: () =&gt; qc.<span style="color: var(--teal);">invalidateQueries</span>(['goals'])</div>
+          <div style="padding-left: 12px;">})</div>
+          <div>}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════
+     8. IDENTIDADE VISUAL
+══════════════════════════════════════════ -->
+<section>
+  <div class="section-header">
+    <div class="section-icon" style="background:#EDE9FE;">🎨</div>
+    <h2>8. Identidade Visual</h2>
+    <span class="tag">design system</span>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <h3>Paleta de Cores</h3>
+      <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 12px;">
+        <div style="display:flex; align-items:center; gap: 12px;">
+          <div style="width:40px;height:40px;border-radius:8px;background:linear-gradient(135deg,#F8FAFC,#EFF6FF,#EEF2FF);border:1px solid var(--border);"></div>
+          <div><div style="font-size:12.5px;font-weight:600;">Background Gradient</div><div style="font-size:11.5px;color:var(--muted);font-family:monospace;">from-slate-50 via-blue-50 to-indigo-50</div></div>
+        </div>
+        <div style="display:flex; align-items:center; gap: 12px;">
+          <div style="width:40px;height:40px;border-radius:8px;background:#2563EB;"></div>
+          <div><div style="font-size:12.5px;font-weight:600;">Azul Primário</div><div style="font-size:11.5px;color:var(--muted);font-family:monospace;">blue-600 · #2563EB</div></div>
+        </div>
+        <div style="display:flex; align-items:center; gap: 12px;">
+          <div style="width:40px;height:40px;border-radius:8px;background:#16A34A;"></div>
+          <div><div style="font-size:12.5px;font-weight:600;">Verde Sucesso</div><div style="font-size:11.5px;color:var(--muted);font-family:monospace;">green-600 · #16A34A</div></div>
+        </div>
+        <div style="display:flex; align-items:center; gap: 12px;">
+          <div style="width:40px;height:40px;border-radius:8px;background:#7C3AED;"></div>
+          <div><div style="font-size:12.5px;font-weight:600;">Roxo Ferramentas</div><div style="font-size:11.5px;color:var(--muted);font-family:monospace;">purple-600 · #7C3AED</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Padrões de Cards</h3>
+      <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 12px;">
+        <div style="background: rgba(255,255,255,0.6); backdrop-filter: blur(8px); border: 1px solid rgba(226,232,240,0.8); border-radius: 12px; padding: 14px;">
+          <div style="font-size: 12.5px; font-weight: 600; margin-bottom: 4px;">Card Principal</div>
+          <div style="font-family: monospace; font-size: 11px; color: var(--muted);">bg-white/60 backdrop-blur-sm</div>
+        </div>
+        <div style="background: linear-gradient(135deg, #EFF6FF, #EEF2FF); border: 1px solid #BFDBFE; border-radius: 12px; padding: 14px;">
+          <div style="font-size: 12.5px; font-weight: 600; margin-bottom: 4px;">Card Ferramenta (Azul)</div>
+          <div style="font-family: monospace; font-size: 11px; color: var(--muted);">from-blue-50 to-indigo-50</div>
+        </div>
+        <div style="background: linear-gradient(135deg, #F0FDF4, #ECFDF5); border: 1px solid #BBF7D0; border-radius: 12px; padding: 14px;">
+          <div style="font-size: 12.5px; font-weight: 600; margin-bottom: 4px;">Card Sucesso (Verde)</div>
+          <div style="font-family: monospace; font-size: 11px; color: var(--muted);">from-green-50 to-emerald-50</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="margin-top: 16px;">
+    <div class="card">
+      <h3>Logo</h3>
+      <div style="display: flex; align-items: center; gap: 16px; margin-top: 12px;">
+        <img src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68f695b8ca770d93e4eed7a4/6336fe853_POWERLIFE-app-small.png"
+             alt="PowerLife Logo"
+             style="height: 48px; object-fit: contain; border-radius: 8px;"
+             onerror="this.style.display='none'">
+        <div>
+          <div style="font-size: 12.5px; color: var(--muted);">URL da imagem:</div>
+          <code style="font-size: 11px; color: var(--indigo); word-break: break-all; font-family: monospace;">https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68f695b8ca770d93e4eed7a4/6336fe853_POWERLIFE-app-small.png</code>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════
+     9. AUTENTICAÇÃO & CONTROLE DE ACESSO
+══════════════════════════════════════════ -->
+<section>
+  <div class="section-header">
+    <div class="section-icon" style="background:#FEE2E2;">🔐</div>
+    <h2>9. Autenticação e Controle de Acesso</h2>
+    <span class="tag">auth + rbac</span>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <h3>Fluxo de Autenticação (Base44)</h3>
+      <div class="flow">
+        <div class="flow-step">
+          <div class="flow-num" style="background:#DBEAFE;color:#1D4ED8;">1</div>
+          <div><h4>Login</h4><p>Base44 gerencia JWT via <code style="font-family:monospace;font-size:11px;">auth.login(email, password)</code></p></div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-num" style="background:#DCFCE7;color:#166534;">2</div>
+          <div><h4>Token persistido</h4><p>Base44 SDK armazena token automaticamente. <code style="font-family:monospace;font-size:11px;">auth.getCurrentUser()</code> na inicialização do App</p></div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-num" style="background:#F3E8FF;color:#6B21A8;">3</div>
+          <div><h4>AuthContext populado</h4><p>User e role disponíveis em toda a árvore via <code style="font-family:monospace;font-size:11px;">useAuth()</code></p></div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-num" style="background:#FFFBEB;color:#92400E;">4</div>
+          <div><h4>ProtectedRoute</h4><p>Verifica autenticação. Rota <code style="font-family:monospace;font-size:11px;">/admin</code> valida adicionalmente <code style="font-family:monospace;font-size:11px;">role === 'admin'</code></p></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Papéis (Roles)</h3>
+      <div style="margin-top: 12px; display: flex; flex-direction: column; gap: 10px;">
+        <div style="background: #EFF6FF; border-radius: 8px; padding: 14px; border: 1px solid #BFDBFE;">
+          <div style="font-size: 13px; font-weight: 700; color: #1D4ED8; margin-bottom: 6px;">🧑‍💼 coach</div>
+          <ul style="font-size: 12.5px; padding-left: 16px; color: var(--muted); line-height: 2;">
+            <li>Acesso às suas ferramentas e clientes</li>
+            <li>Dashboard pessoal com suas métricas</li>
+            <li>Criação e edição de avaliações</li>
+            <li><strong>Não vê</strong> o Painel Admin</li>
+          </ul>
+        </div>
+        <div style="background: #FEE2E2; border-radius: 8px; padding: 14px; border: 1px solid #FECACA;">
+          <div style="font-size: 13px; font-weight: 700; color: #991B1B; margin-bottom: 6px;">🛡️ admin</div>
+          <ul style="font-size: 12.5px; padding-left: 16px; color: var(--muted); line-height: 2;">
+            <li>Tudo do role coach</li>
+            <li>Acesso ao Painel Admin (<code style="font-family:monospace;font-size:11px;">/admin</code>)</li>
+            <li>Visão de todos os coaches e clientes</li>
+            <li>Métricas globais da plataforma</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════
+     10. DECISÕES DE ARQUITETURA
+══════════════════════════════════════════ -->
+<section>
+  <div class="section-header">
+    <div class="section-icon" style="background:#F0FDF4;">📐</div>
+    <h2>10. Decisões Arquiteturais Chave (ADRs)</h2>
+    <span class="tag">architecture decisions</span>
+  </div>
+
+  <div style="display: flex; flex-direction: column; gap: 12px;">
+
+    <div class="callout c-blue">
+      <strong>ADR-01 — Co-localização de lógica por domínio</strong>
+      Cada ferramenta é um módulo autocontido em <code style="font-family:monospace;font-size:11px;">pages/tools/</code>. Componentes de UI genéricos ficam em <code style="font-family:monospace;font-size:11px;">components/ui/</code> e componentes de domínio em <code style="font-family:monospace;font-size:11px;">components/shared/</code>. Isso facilita escalar novas ferramentas sem impacto lateral.
+    </div>
+
+    <div class="callout c-teal">
+      <strong>ADR-02 — React Query como única fonte de verdade de servidor</strong>
+      Nenhum estado de servidor é duplicado no Context API. O Context serve apenas para estado de UI global (auth, tema). React Query gerencia cache, refetch e sincronização automática com o Base44 SDK.
+    </div>
+
+    <div class="callout c-amber">
+      <strong>ADR-03 — Layout responsivo por breakpoint, não por componente alternativo</strong>
+      O <code style="font-family:monospace;font-size:11px;">Layout.jsx</code> usa classes Tailwind (<code style="font-family:monospace;font-size:11px;">lg:flex hidden</code> / <code style="font-family:monospace;font-size:11px;">lg:hidden</code>) para alternar entre sidebar desktop e header+footer mobile. Um único componente de layout gerencia ambos os contextos, evitando duplicação de lógica de navegação.
+    </div>
+
+    <div class="callout c-purple">
+      <strong>ADR-04 — Recharts com tema centralizado</strong>
+      Toda configuração visual do Recharts (cores, margens, tooltips) fica em <code style="font-family:monospace;font-size:11px;">lib/chartTheme.js</code> e é importada por todos os gráficos. Mudanças visuais globais requerem alteração em apenas um arquivo.
+    </div>
+
+    <div class="callout c-coral">
+      <strong>ADR-05 — Controle de idioma no HTML, não no JS</strong>
+      <code style="font-family:monospace;font-size:11px;">lang="pt-BR"</code> no <code style="font-family:monospace;font-size:11px;">&lt;html&gt;</code> e <code style="font-family:monospace;font-size:11px;">meta name="google" content="notranslate"</code> bloqueiam tradução automática do navegador e Google Translate na camada de markup, sem necessidade de bibliotecas i18n externas.
+    </div>
+
+  </div>
+</section>
+
+</div>
+
+<footer>
+  PowerLife Architecture Document · Gerado por Engenheiro Sênior · React 18 + Base44 + Tailwind · pt-BR
+</footer>
+
+</body>
+</html>

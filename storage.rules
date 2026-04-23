@@ -1,0 +1,45 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Helper function to check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Helper function to check if user is accessing their own folder
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Rules for user-specific folders
+    match /users/{mentorId} {
+      // Regra específica para pastas de clientes dentro do mentor
+      // Permite que tanto o mentor quanto o cliente acessem a pasta
+      match /clients/{clientId}/{allPaths=**} {
+        allow read, write: if request.auth.uid == mentorId || request.auth.uid == clientId;
+      }
+      
+      // Regra geral para o mentor acessar seus próprios arquivos
+      match /{allPaths=**} {
+        allow read, write: if request.auth.uid == mentorId;
+      }
+    }
+
+    // Regras para perfis DISC
+    match /perfis_disc/{userId}/{allPaths=**} {
+      allow read, write: if request.auth.uid == userId;
+    }
+
+    // Rules for client-specific folders (if needed to be shared with coach)
+    match /clients/{clientId}/{allPaths=**} {
+      // For now, only authenticated users can access clients folder
+      // In a real app, we would check if the coach owns this client
+      allow read, write: if isAuthenticated();
+    }
+    
+    // Default deny
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
