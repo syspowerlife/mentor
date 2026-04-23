@@ -93,7 +93,7 @@ export class NotificationTriggerService {
     
     for (const doc of snapshot.docs) {
       const data = doc.data();
-      if (data.status === 'concluida' || !data.prazo) continue;
+      if (data.status === 'concluido' || !data.prazo) continue;
 
       const prazo = new Date(data.prazo);
 

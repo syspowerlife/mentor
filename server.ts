@@ -23,54 +23,149 @@ let app: admin.app.App;
 const serviceAccountKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
 
 if (admin.apps.length === 0) {
-  const adminConfig: admin.AppOptions = {};
-  
-  if (serviceAccountKey) {
-    try {
+  try {
+    const configProjectId = firebaseConfig.projectId;
+    
+    if (serviceAccountKey) {
       const serviceAccount = JSON.parse(serviceAccountKey);
-      adminConfig.credential = admin.credential.cert(serviceAccount);
-      // Project ID is usually inside the service account JSON
-      console.log("Firebase Admin: Initializing with Service Account Key.");
-    } catch (error) {
-      console.error("Firebase Admin: Failed to parse FIREBASE_SERVICE_ACCOUNT_KEY:", error);
+      console.log(`Firebase Admin: Initializing with Service Account [${serviceAccount.client_email}] for project [${serviceAccount.project_id}]`);
+      
+      app = admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount),
+        projectId: serviceAccount.project_id
+      });
+    } else {
+      // CRITICAL: We MUST provide the projectId from the config. 
+      // Otherwise, ADC targets the internal project (ais-us-west2-...) where Firestore API is disabled.
+      console.log(`Firebase Admin: Initializing with ADC for project [${configProjectId || 'auto-detect'}].`);
+      app = admin.initializeApp({
+        projectId: configProjectId
+      });
     }
-  } else {
-    console.log("Firebase Admin: Using Application Default Credentials (ADC).");
+  } catch (error) {
+    console.error("Firebase Admin: Initialization error, falling back to basic init:", error);
+    app = admin.initializeApp();
   }
-
-  // Always prefer the projectId from config if we are in this environment
-  adminConfig.projectId = firebaseConfig.projectId;
-
-  app = admin.initializeApp(adminConfig);
 } else {
   app = admin.app();
 }
 
 // Ensure we use the correct database ID. 
-// If it's undefined or "(default)", we call getFirestore without it.
 const databaseId = firebaseConfig.firestoreDatabaseId && firebaseConfig.firestoreDatabaseId !== '(default)' 
   ? firebaseConfig.firestoreDatabaseId 
   : undefined;
 
-const db = getFirestore(app, databaseId);
+// Diagnostics
+const currentProject = app.options.projectId || "auto-detected";
+console.log(`Firestore target: Project [${currentProject}] Database [${databaseId || '(default)'}]`);
 
-console.log(`Firestore initialized for project ${firebaseConfig.projectId} and database ${databaseId || '(default)'}`);
+// We use let for db to allow global fallback if named database is broken
+let db = getFirestore(app, databaseId);
 
-// Initial connection test
+// --- Health Check System ---
+const systemStatus = {
+  firebase: { status: 'initializing', message: 'Iniciando conexão...' },
+  resend: { enabled: false, message: 'Não configurado' },
+  stripe: { enabled: false, message: 'Não configurado' },
+  mercadopago: { enabled: false, message: 'Não configurado' },
+  googleOAuth: { enabled: false, message: 'Não configurado' }
+};
+
+// Initial connection test with automatic permanent switch to default database if broken
 async function testFirestoreConnection() {
+  const targetDbName = databaseId || "(default)";
   try {
+    // Identity Debug
+    console.log(`[Firebase Diagnostics]`);
+    console.log(`- Project target: ${app.options.projectId}`);
+    console.log(`- Database target: ${targetDbName}`);
+    console.log(`- Authentication: ${serviceAccountKey ? "Service Account Key detected" : "Using environment Default Credentials (ADC)"}`);
+
     const snapshot = await db.collection("users").limit(1).get();
-    console.log(`Firestore connection test success: Accessible collections verified. (Users found: ${snapshot.size})`);
+    console.log(`Firestore connection success: Found ${snapshot.size} users.`);
+    systemStatus.firebase = { status: 'ok', message: `Conectado ao projeto ${app.options.projectId}, banco ${targetDbName}` };
   } catch (error: any) {
-    if (error.code === 7 || (error.message && error.message.includes('PERMISSION_DENIED'))) {
-      console.error("CRITICAL: Firestore connection test FAILED with PERMISSION_DENIED.");
-      console.error("Check if the Service Account has 'Cloud Datastore User' role on database:", databaseId || '(default)');
-    } else {
-      console.error("Firestore connection test failed with unexpected error:", error);
+    const isPermissionError = error.code === 7 || error.message?.includes('PERMISSION_DENIED');
+    const isNotFoundError = error.code === 5 || error.message?.includes('NOT_FOUND');
+
+    systemStatus.firebase = { 
+      status: 'error', 
+      message: `Erro ${error.code}: ${error.message}` 
+    };
+
+    if (isPermissionError) {
+      console.error(`[CRITICAL] PERMISSION_DENIED on project ${app.options.projectId}, database ${targetDbName}.`);
+      console.error("  -> Possible Cause: Identity mismatch. The server's identity does not have 'Cloud Datastore User' permissions on this project.");
+      console.error("  -> Action Required: Set FIREBASE_SERVICE_ACCOUNT_KEY in your environment or ensure the DB is in the SAME project as the server.");
+    }
+
+    if (databaseId && (isPermissionError || isNotFoundError)) {
+      console.warn(`Attempting EMERGENCY FALLBACK to (default) database...`);
+      try {
+        const fallbackDb = getFirestore(app);
+        await fallbackDb.collection("users").limit(1).get();
+        db = fallbackDb; // PERMANENTLY switch the global db reference
+        console.log(`Fallback SUCCESS: Using (default) database for the rest of the session.`);
+        systemStatus.firebase = { status: 'warning', message: 'Usando banco de dados (default) por falha no banco nomeado' };
+      } catch (fallbackError: any) {
+        console.error(`TOTAL FAILURE: Access to (default) also denied. (Code: ${fallbackError.code})`);
+      }
     }
   }
 }
 testFirestoreConnection();
+
+function validateIntegrations() {
+  console.log(`[Integration Health Check]`);
+  
+  if (process.env.RESEND_API_KEY) {
+    systemStatus.resend = { enabled: true, message: 'Configurado e pronto' };
+    console.log('✅ Resend: Configurado');
+  } else {
+    console.warn('⚠️ Resend: RESEND_API_KEY faltando. Notificações por e-mail desativadas.');
+  }
+
+  if (process.env.STRIPE_SECRET_KEY) {
+    systemStatus.stripe = { enabled: true, message: 'Configurado e pronto' };
+    console.log('✅ Stripe: Configurado');
+  } else {
+    console.warn('⚠️ Stripe: STRIPE_SECRET_KEY faltando. Pagamentos Stripe desativados.');
+  }
+
+  if (process.env.MERCADOPAGO_ACCESS_TOKEN) {
+    systemStatus.mercadopago = { enabled: true, message: 'Configurado e pronto' };
+    console.log('✅ Mercado Pago: Configurado');
+  } else {
+    console.warn('⚠️ Mercado Pago: MERCADOPAGO_ACCESS_TOKEN faltando. Pagamentos Mercado Pago desativados.');
+  }
+
+  if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+    systemStatus.googleOAuth = { enabled: true, message: 'Configurado e pronto' };
+    console.log('✅ Google OAuth: Configurado');
+  } else {
+    console.warn('⚠️ Google OAuth: GOOGLE_CLIENT_ID/SECRET faltando. Login Google (OAuth) desativado.');
+  }
+}
+validateIntegrations();
+
+// Safe wrapper for cron operations to provide better context
+const runSafeCron = async (taskName: string, operation: () => Promise<void>) => {
+  try {
+    await operation();
+  } catch (error: any) {
+    const isPermissionError = error.code === 7 || error.message?.includes('PERMISSION_DENIED');
+    const isNotFoundError = error.code === 5 || error.message?.includes('NOT_FOUND');
+    
+    if (isPermissionError) {
+      console.warn(`[Cron: ${taskName}] Access Denied. The server's identity (ADC) lacks permissions on project ${app.options.projectId}.`);
+      console.warn(` -> Background tasks like email notifications require a Service Account Key (FIREBASE_SERVICE_ACCOUNT_KEY).`);
+    } else if (isNotFoundError) {
+      console.warn(`[Cron: ${taskName}] Resource not found (DB ID: ${databaseId || '(default)'}).`);
+    } else {
+      console.error(`[Cron: ${taskName}] Unexpected Error:`, error.message || error);
+    }
+  }
+};
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 const stripe = process.env.STRIPE_SECRET_KEY ? new Stripe(process.env.STRIPE_SECRET_KEY) : null;
@@ -707,6 +802,11 @@ async function startServer() {
     }
   });
 
+  // Admin: System Health Check
+  app.get("/api/admin/health", requireAdmin, async (req, res) => {
+    res.json(systemStatus);
+  });
+
   // Admin: Reset Password
   app.post("/api/admin/reset-password", async (req, res) => {
     const { email } = req.body;
@@ -833,11 +933,9 @@ async function checkCompletedGoalsAndNotify() {
   console.log("Checking for completed goals to notify...");
   try {
     const metasRef = db.collection("metas_smart");
-    // Simplify query to avoid potential range filter issues on non-default databases
-    // We filter 'completed_notification_sent' in memory to be safer
-    const snapshot = await metasRef.where("status", "==", "concluida").get();
+    const snapshot = await metasRef.where("status", "==", "concluido").get();
     
-    console.log(`Found ${snapshot.docs.length} goals with status 'concluida'.`);
+    console.log(`Found ${snapshot.docs.length} goals with status 'concluido'.`);
 
     for (const doc of snapshot.docs) {
       const data = doc.data();
@@ -890,15 +988,8 @@ async function checkCompletedGoalsAndNotify() {
       await doc.ref.update({ completed_notification_sent: true });
     }
   } catch (error: any) {
-    if (error.code === 7 || (error.message && error.message.includes('PERMISSION_DENIED'))) {
-      console.error("PERMISSION_DENIED in checkCompletedGoalsAndNotify. This usually means the service account lacks 'Cloud Datastore User' role on the specific database ID:", firebaseConfig.firestoreDatabaseId);
-    }
-    console.error("Detailed Error in checkCompletedGoalsAndNotify:", {
-      message: error.message,
-      code: error.code,
-      stack: error.stack,
-      details: error.details
-    });
+    // Re-throw to be handled by runSafeCron
+    throw error;
   }
 }
 
@@ -945,42 +1036,27 @@ async function sendWeeklyAITips() {
 }
 
 function setupCronJobs() {
-  // Run daily at 08:00
-  cron.schedule("0 8 * * *", async () => {
-    try {
-      console.log("Running daily notification check...");
+  // Run daily at 08:00 (Daily Checks)
+  cron.schedule("0 8 * * *", () => runSafeCron("Daily All Checks", async () => {
+    console.log("Running daily notification check...");
+    await checkOverdueGoalsAndNotify();
+    await checkCompletedGoalsAndNotify();
+    await checkNewUsersAndWelcome();
+    await checkUpcomingSessionsAndNotify();
+  }));
+
+  // Run weekly on Mondays at 09:00 for AI Tips
+  cron.schedule("0 9 * * 1", () => runSafeCron("Weekly AI Tips", sendWeeklyAITips));
+
+  // For testing, run every 5 minutes in dev
+  if (process.env.NODE_ENV !== "production") {
+    cron.schedule("*/5 * * * *", () => runSafeCron("Dev Fast Check", async () => {
+      console.log("Running dev notification check (every 5 mins)...");
       await checkOverdueGoalsAndNotify();
       await checkCompletedGoalsAndNotify();
       await checkNewUsersAndWelcome();
       await checkUpcomingSessionsAndNotify();
-    } catch (err) {
-      console.error("CRON Error (daily):", err);
-    }
-  });
-
-  // Run weekly on Mondays at 09:00 for AI Tips
-  cron.schedule("0 9 * * 1", async () => {
-    try {
-      console.log("Running weekly AI tips check...");
-      await sendWeeklyAITips();
-    } catch (err) {
-      console.error("CRON Error (weekly):", err);
-    }
-  });
-
-  // For testing, run every 5 minutes in dev
-  if (process.env.NODE_ENV !== "production") {
-    cron.schedule("*/5 * * * *", async () => {
-      try {
-        console.log("Running dev notification check (every 5 mins)...");
-        await checkOverdueGoalsAndNotify();
-        await checkCompletedGoalsAndNotify();
-        await checkNewUsersAndWelcome();
-        await checkUpcomingSessionsAndNotify();
-      } catch (err) {
-        console.error("CRON Error (dev):", err);
-      }
-    });
+    }));
   }
 }
 
@@ -990,7 +1066,6 @@ async function checkUpcomingSessionsAndNotify() {
     const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
     const agendamentosRef = db.collection("agendamentos");
     
-    // Get all pending sessions
     const snapshot = await agendamentosRef
       .where("tipo", "==", "sessao")
       .where("status", "==", "pendente")
@@ -1047,11 +1122,7 @@ async function checkUpcomingSessionsAndNotify() {
       }
     }
   } catch (error: any) {
-    if (error.code === 7 || (error.message && error.message.includes('PERMISSION_DENIED'))) {
-      console.error("Permission Denied in checkUpcomingSessionsAndNotify. Please ensure FIREBASE_SERVICE_ACCOUNT_KEY is set in your environment variables.");
-    } else {
-      console.error("Error in checkUpcomingSessionsAndNotify:", error);
-    }
+    throw error;
   }
 }
 
@@ -1088,11 +1159,7 @@ async function checkNewUsersAndWelcome() {
       }
     }
   } catch (error: any) {
-    if (error.code === 7 || (error.message && error.message.includes('PERMISSION_DENIED'))) {
-      console.error("Permission Denied in checkNewUsersAndWelcome. Please ensure FIREBASE_SERVICE_ACCOUNT_KEY is set in your environment variables.");
-    } else {
-      console.error("Error in checkNewUsersAndWelcome:", error);
-    }
+    throw error;
   }
 }
 
@@ -1101,7 +1168,6 @@ async function checkOverdueGoalsAndNotify() {
     const now = new Date();
     const metasRef = db.collection("metas_smart");
     
-    // Use 'in' instead of '!=' to avoid potential range filter issues
     const snapshot = await metasRef.where("status", "in", ["a_fazer", "em_andamento", "pausada", "pendente"]).get();
     
     for (const doc of snapshot.docs) {
@@ -1161,11 +1227,7 @@ async function checkOverdueGoalsAndNotify() {
       }
     }
   } catch (error: any) {
-    if (error.code === 7 || (error.message && error.message.includes('PERMISSION_DENIED'))) {
-      console.error("Permission Denied in checkOverdueGoalsAndNotify. Please ensure FIREBASE_SERVICE_ACCOUNT_KEY is set in your environment variables.");
-    } else {
-      console.error("Error in checkOverdueGoalsAndNotify:", error);
-    }
+    throw error;
   }
 }
 

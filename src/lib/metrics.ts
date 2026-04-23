@@ -13,7 +13,7 @@ export function getOverdueItemsCount(items: { prazo?: string, status?: string }[
   if (!items || items.length === 0) return 0;
   const now = new Date();
   return items.filter(item => {
-    if (!item.prazo || item.status === 'concluida' || item.status === 'concluido') return false;
+    if (!item.prazo || item.status === 'concluido') return false;
     return new Date(item.prazo) < now;
   }).length;
 }

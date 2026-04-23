@@ -287,7 +287,7 @@ export function PDIDetail() {
   });
 
   const pdiAcoes = acoes.filter((a: any) => metas.some((m: any) => m.id === a.meta_id));
-  const completedAcoes = pdiAcoes.filter((a: any) => a.status === 'concluído').length;
+  const completedAcoes = pdiAcoes.filter((a: any) => a.status === 'concluido').length;
   const totalAcoes = pdiAcoes.length;
   const progressoGeral = calculateProgress(completedAcoes, totalAcoes);
 
@@ -353,7 +353,7 @@ export function PDIDetail() {
             </Button>
           )}
           <Badge variant={pdi.status === 'ativo' ? 'default' : pdi.status === 'pendente_aprovacao' ? 'warning' : pdi.status === 'ajuste_solicitado' ? 'destructive' : 'secondary'} className="text-sm px-3 py-1">
-            {t(`pdi.status.${pdi.status === 'pendente_aprovacao' ? 'pending_approval' : pdi.status === 'ajuste_solicitado' ? 'adjustment_requested' : pdi.status === 'concluído' ? 'completed' : pdi.status === 'rascunho' ? 'draft' : pdi.status === 'cancelado' ? 'cancelled' : 'active'}`).toUpperCase()}
+            {t(`pdi.status.${pdi.status === 'pendente_aprovacao' ? 'pending_approval' : pdi.status === 'ajuste_solicitado' ? 'adjustment_requested' : pdi.status === 'concluido' ? 'completed' : pdi.status === 'rascunho' ? 'draft' : pdi.status === 'cancelado' ? 'cancelled' : 'active'}`).toUpperCase()}
           </Badge>
           {(currentUser?.uid === pdi.gestor_id || currentUserProfile?.role === 'admin') && (
             <Button 
@@ -506,12 +506,12 @@ export function PDIDetail() {
                             {metaAcoes.map((acao: any) => (
                               <li key={acao.id} className="flex items-center gap-3 p-2 rounded-md hover:bg-slate-50 border border-transparent hover:border-slate-100">
                                 <button 
-                                  onClick={() => toggleAcaoStatus.mutate({ id: acao.id, status: acao.status === 'concluído' ? 'pendente' : 'concluído' })}
+                                  onClick={() => toggleAcaoStatus.mutate({ id: acao.id, status: acao.status === 'concluido' ? 'pendente' : 'concluido' })}
                                   className="text-slate-400 hover:text-blue-600 transition-colors"
                                 >
-                                  {acao.status === 'concluído' ? <CheckCircle2 className="w-5 h-5 text-green-500" /> : <Circle className="w-5 h-5" />}
+                                  {acao.status === 'concluido' ? <CheckCircle2 className="w-5 h-5 text-green-500" /> : <Circle className="w-5 h-5" />}
                                 </button>
-                                <span className={`flex-1 text-sm ${acao.status === 'concluído' ? 'text-slate-400 line-through' : 'text-slate-700'}`}>
+                                <span className={`flex-1 text-sm ${acao.status === 'concluido' ? 'text-slate-400 line-through' : 'text-slate-700'}`}>
                                   {acao.descricao}
                                 </span>
                                 <span className="text-xs text-slate-400">{t('pdi.detail.goals_tab.deadline')}: {formatDateOrTimestamp(acao.prazo)}</span>

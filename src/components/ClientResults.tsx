@@ -125,7 +125,7 @@ export function ClientResults({ userId }: ClientResultsProps) {
   const avgSatisfaction = avaliacoesData && avaliacoesData.length > 0 
     ? (avaliacoesData.reduce((acc: number, curr: any) => acc + curr.nota, 0) / avaliacoesData.length).toFixed(1)
     : '0.0';
-  const metasConcluidas = metasData?.filter((m: any) => m.status === 'concluida').length || 0;
+  const metasConcluidas = metasData?.filter((m: any) => m.status === 'concluido').length || 0;
   const totalMetas = metasData?.length || 0;
   const metaCompletionRate = totalMetas > 0 ? Math.round((metasConcluidas / totalMetas) * 100) : 0;
 
@@ -279,7 +279,7 @@ export function ClientResults({ userId }: ClientResultsProps) {
                         <p className="text-xs text-slate-500 mt-1">Prazo: {new Date(meta.prazo).toLocaleDateString()}</p>
                       </div>
                       <Badge variant={
-                        meta.status === 'concluida' ? 'success' : 
+                        meta.status === 'concluido' ? 'success' : 
                         meta.status === 'em_andamento' ? 'default' : 'secondary'
                       }>
                         {meta.status?.replace('_', ' ')}

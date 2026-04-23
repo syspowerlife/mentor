@@ -25,7 +25,7 @@ service cloud.firestore {
     // Document ID: {metaId}
     // Fields:
     //   - created_by: string (UID)
-    //   - status: string (pendente, em_andamento, concluida, pausada)
+    //   - status: string (pendente, em_andamento, concluido, pausada)
     //   - titulo: string
     //
     // Collection: clientes
@@ -146,7 +146,7 @@ service cloud.firestore {
     function isValidMeta(data) {
       return data.created_by == request.auth.uid &&
              data.titulo is string && data.titulo.size() > 0 && data.titulo.size() < 200 &&
-             data.status in ['a_fazer', 'em_andamento', 'concluida', 'pausada'] &&
+             data.status in ['a_fazer', 'em_andamento', 'concluido', 'pausada', 'pendente'] &&
              (!('especifica' in data) || (data.especifica is string && data.especifica.size() < 500)) &&
              (!('mensuravel' in data) || (data.mensuravel is string && data.mensuravel.size() < 500)) &&
              (!('atingivel' in data) || (data.atingivel is string && data.atingivel.size() < 500)) &&

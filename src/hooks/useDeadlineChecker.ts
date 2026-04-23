@@ -50,7 +50,7 @@ export function useDeadlineChecker() {
         const now = new Date();
         snapshot.docs.forEach((doc) => {
           const data = doc.data();
-          if (data.status === 'concluida') return;
+          if (data.status === 'concluido') return;
 
           const prazo = data.prazo instanceof Timestamp ? data.prazo.toDate() : parseISO(data.prazo);
           const hoursDiff = differenceInHours(prazo, now);

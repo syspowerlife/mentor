@@ -52,7 +52,7 @@ export function Dashboard() {
   const filteredAgendamentos = filterByDate(agendamentos, 'data_inicio', days);
 
   const totalAvaliacoes = filteredRodas.length + filteredSwots.length + filteredDiscs.length;
-  const metasConcluidas = filteredMetas.filter(m => m.status === 'concluida').length;
+  const metasConcluidas = filteredMetas.filter(m => m.status === 'concluido').length;
   const taxaConclusao = filteredMetas.length ? Math.round((metasConcluidas / filteredMetas.length) * 100) : 0;
   const metasAtivas = filteredMetas.filter(m => m.status === 'em_andamento').length;
   

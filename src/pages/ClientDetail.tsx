@@ -620,7 +620,7 @@ export function ClientDetail() {
                         <h4 className="font-bold text-slate-800">{meta.titulo}</h4>
                         <p className="text-sm text-slate-500">Prazo: {meta.prazo}</p>
                       </div>
-                      <Badge variant={meta.status === 'concluida' ? 'success' : 'default'} className={meta.status === 'em_andamento' ? 'bg-blue-500' : ''}>
+                      <Badge variant={meta.status === 'concluido' ? 'success' : 'default'} className={meta.status === 'em_andamento' ? 'bg-blue-500' : ''}>
                         {meta.status}
                       </Badge>
                     </div>

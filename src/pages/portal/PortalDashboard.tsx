@@ -163,7 +163,7 @@ export function PortalDashboard() {
     );
   }
 
-  const metasConcluidas = metas.filter(m => m.status === 'concluida').length;
+  const metasConcluidas = metas.filter(m => m.status === 'concluido').length;
   const progressoMetas = metas.length > 0 ? (metasConcluidas / metas.length) * 100 : 0;
 
   return (
@@ -231,10 +231,10 @@ export function PortalDashboard() {
                     metas.map((meta) => (
                       <div key={meta.id} className="flex items-start gap-4 p-4 rounded-xl border bg-white hover:border-blue-200 transition-colors">
                         <div className={`mt-1 p-2 rounded-full ${
-                          meta.status === 'concluida' ? 'bg-green-100 text-green-600' : 
+                          meta.status === 'concluido' ? 'bg-green-100 text-green-600' : 
                           meta.status === 'em_andamento' ? 'bg-blue-100 text-blue-600' : 'bg-slate-100 text-slate-600'
                         }`}>
-                          {meta.status === 'concluida' ? <CheckCircle2 className="w-4 h-4" /> : <Clock className="w-4 h-4" />}
+                          {meta.status === 'concluido' ? <CheckCircle2 className="w-4 h-4" /> : <Clock className="w-4 h-4" />}
                         </div>
                         <div className="flex-1">
                           <h4 className="font-semibold text-slate-900">{meta.titulo}</h4>

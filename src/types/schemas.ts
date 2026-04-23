@@ -21,7 +21,7 @@ export const metaSmartSchema = z.object({
   relevante: z.string().optional(),
   temporal: z.string().optional(),
   prazo: z.string().optional(),
-  status: z.enum(['a_fazer', 'em_andamento', 'concluida', 'pausada']),
+  status: z.enum(['a_fazer', 'em_andamento', 'concluido', 'pausada', 'pendente']),
 });
 
 export type MetaSmartFormData = z.infer<typeof metaSmartSchema>;

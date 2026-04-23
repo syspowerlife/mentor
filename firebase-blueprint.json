@@ -79,7 +79,7 @@
         "atingivel": { "type": "string" },
         "relevante": { "type": "string" },
         "temporal": { "type": "string" },
-        "status": { "type": "string", "enum": ["a_fazer", "em_andamento", "concluida", "pausada"] },
+        "status": { "type": "string", "enum": ["a_fazer", "em_andamento", "concluido", "pausada", "pendente"] },
         "prazo": { "type": "string", "format": "date-time" },
         "last_overdue_notification_at": { "type": "string", "format": "date-time" },
         "completed_notification_sent": { "type": "boolean" }
@@ -216,7 +216,7 @@
         "gestor_id": { "type": "string" },
         "data_inicio": { "type": "string", "format": "date-time" },
         "data_fim": { "type": "string", "format": "date-time" },
-        "status": { "type": "string", "enum": ["rascunho", "pendente_aprovacao", "ativo", "ajuste_solicitado", "concluído", "cancelado"] },
+        "status": { "type": "string", "enum": ["rascunho", "pendente_aprovacao", "ativo", "ajuste_solicitado", "concluido", "cancelado"] },
         "created_at": { "type": "string", "format": "date-time" }
       }
     },
@@ -244,7 +244,7 @@
         "pdi_id": { "type": "string" },
         "descricao": { "type": "string" },
         "prazo": { "type": "string", "format": "date-time" },
-        "status": { "type": "string", "enum": ["pendente", "concluído"] }
+        "status": { "type": "string", "enum": ["pendente", "concluido"] }
       }
     },
     "PDIFeedback": {

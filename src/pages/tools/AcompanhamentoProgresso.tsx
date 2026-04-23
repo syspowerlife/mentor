@@ -187,7 +187,7 @@ export function AcompanhamentoProgresso() {
     });
 
     metas.forEach((m: any) => {
-      if (m.status === 'concluida') {
+      if (m.status === 'concluido') {
         const date = parseSafeDate(m.data_conclusao || m.created_at) || new Date(0);
         const key = format(date, 'yyyy-MM');
         const month = months.find(m => m.key === key);
@@ -233,7 +233,7 @@ export function AcompanhamentoProgresso() {
     const prevAvg = prevRoda ? AREAS.reduce((acc, area) => acc + (prevRoda[area] || 0), 0) / AREAS.length : 0;
     const diff = currentAvg - prevAvg;
 
-    const completedMetas = metas.filter((m: any) => m.status === 'concluida').length;
+    const completedMetas = metas.filter((m: any) => m.status === 'concluido').length;
     
     return {
       rodaAvg: currentAvg.toFixed(1),
@@ -449,7 +449,7 @@ export function AcompanhamentoProgresso() {
               <div className="space-y-2">
                 <Label className="text-xs text-slate-500 font-semibold uppercase tracking-wider">Metas Relacionadas</Label>
                 <div className="grid grid-cols-1 gap-2 border border-slate-100 rounded-lg p-2 max-h-48 overflow-y-auto bg-slate-50/30">
-                  {metas.filter(m => m.status !== 'concluida' || (sessaoForm.meta_ids && sessaoForm.meta_ids.includes(m.id))).map(meta => (
+                  {metas.filter(m => m.status !== 'concluido' || (sessaoForm.meta_ids && sessaoForm.meta_ids.includes(m.id))).map(meta => (
                     <label 
                       key={meta.id} 
                       className={`flex items-center gap-3 p-2 rounded-md border transition-all cursor-pointer ${

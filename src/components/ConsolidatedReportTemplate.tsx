@@ -30,8 +30,8 @@ export function ConsolidatedReportTemplate({
 }: ConsolidatedReportTemplateProps) {
   if (!cliente) return null;
 
-  const activeMetas = metas.filter(m => m.status !== 'concluida');
-  const completedMetas = metas.filter(m => m.status === 'concluida');
+  const activeMetas = metas.filter(m => m.status !== 'concluido');
+  const completedMetas = metas.filter(m => m.status === 'concluido');
   const pastAgendamentos = agendamentos.filter(a => a.status === 'concluido');
   const upcomingAgendamentos = agendamentos.filter(a => a.status === 'pendente');
 
@@ -85,8 +85,8 @@ export function ConsolidatedReportTemplate({
                 <h4 className="font-bold text-slate-800">{meta.titulo}</h4>
                 <p className="text-xs text-slate-500 mt-1">Prazo: {meta.prazo}</p>
               </div>
-              <Badge variant={meta.status === 'concluida' ? 'success' : 'default'} className={meta.status === 'em_andamento' ? 'bg-blue-500' : ''}>
-                {meta.status === 'em_andamento' ? 'Em Andamento' : meta.status === 'concluida' ? 'Concluída' : 'Pendente'}
+              <Badge variant={meta.status === 'concluido' ? 'success' : 'default'} className={meta.status === 'em_andamento' ? 'bg-blue-500' : ''}>
+                {meta.status === 'em_andamento' ? 'Em Andamento' : meta.status === 'concluido' ? 'Concluída' : 'Pendente'}
               </Badge>
             </div>
           )) : (

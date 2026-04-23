@@ -35,8 +35,9 @@ import { sendNotification } from '@/lib/notifications';
 const COLUMNS = {
   a_fazer: { id: 'a_fazer', title: 'A Fazer', color: 'bg-slate-100' },
   em_andamento: { id: 'em_andamento', title: 'Em Andamento', color: 'bg-blue-50' },
-  concluida: { id: 'concluida', title: 'Concluída', color: 'bg-green-50' },
-  pausada: { id: 'pausada', title: 'Pausada', color: 'bg-orange-50' }
+  concluido: { id: 'concluido', title: 'Concluída', color: 'bg-green-50' },
+  pausada: { id: 'pausada', title: 'Pausada', color: 'bg-orange-50' },
+  pendente: { id: 'pendente', title: 'Pendente', color: 'bg-yellow-50' }
 };
 
 export function MetaSmart() {
@@ -170,7 +171,7 @@ export function MetaSmart() {
       setEditingMeta(null);
       toast.success('Meta atualizada!');
 
-      if (variables.data.status === 'concluida' && user) {
+      if (variables.data.status === 'concluido' && user) {
         const preferences = userData?.notification_preferences || { goals: true };
         
         if (preferences.goals !== false) {
@@ -294,7 +295,8 @@ export function MetaSmart() {
                       <SelectContent>
                         <SelectItem value="a_fazer">A Fazer</SelectItem>
                         <SelectItem value="em_andamento">Em Andamento</SelectItem>
-                        <SelectItem value="concluida">Concluída</SelectItem>
+                        <SelectItem value="pendente">Pendente</SelectItem>
+                        <SelectItem value="concluido">Concluída</SelectItem>
                         <SelectItem value="pausada">Pausada</SelectItem>
                       </SelectContent>
                     </Select>
@@ -475,8 +477,9 @@ function EditMetaModal({ isOpen, onClose, meta, onSave, isLoading }: any) {
                 <SelectContent>
                   <SelectItem value="a_fazer">A Fazer</SelectItem>
                   <SelectItem value="em_andamento">Em Andamento</SelectItem>
-                  <SelectItem value="concluida">Concluída</SelectItem>
+                  <SelectItem value="concluido">Concluída</SelectItem>
                   <SelectItem value="pausada">Pausada</SelectItem>
+                  <SelectItem value="pendente">Pendente</SelectItem>
                 </SelectContent>
               </Select>
             </div>

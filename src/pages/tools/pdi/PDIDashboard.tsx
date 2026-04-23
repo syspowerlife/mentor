@@ -118,10 +118,10 @@ export function PDIDashboard() {
   // Calculate some stats
   const activePDIs = pdis.filter((p: any) => p.status === 'ativo').length;
   const pendingPDIs = pdis.filter((p: any) => p.status === 'pendente_aprovacao').length;
-  const completedPDIs = pdis.filter((p: any) => p.status === 'concluído').length;
+  const completedPDIs = pdis.filter((p: any) => p.status === 'concluido').length;
 
   const pdiAcoes = acoes.filter((a: any) => metas.some((m: any) => pdis.some((p: any) => p.id === m.pdi_id && m.id === a.meta_id)));
-  const completedAcoes = pdiAcoes.filter((a: any) => a.status === 'concluído').length;
+  const completedAcoes = pdiAcoes.filter((a: any) => a.status === 'concluido').length;
   const progressoMedio = calculateProgress(completedAcoes, pdiAcoes.length);
   const acoesAtrasadas = getOverdueItemsCount(pdiAcoes);
 
@@ -236,12 +236,12 @@ export function PDIDashboard() {
                     <div className="flex items-center gap-4">
                       <Badge variant={
                         pdi.status === 'ativo' ? 'default' : 
-                        pdi.status === 'concluído' ? 'success' : 
+                        pdi.status === 'concluido' ? 'success' : 
                         pdi.status === 'pendente_aprovacao' ? 'warning' : 
                         pdi.status === 'ajuste_solicitado' ? 'destructive' : 
                         'secondary'
                       }>
-                        {t(`pdi.status.${pdi.status === 'pendente_aprovacao' ? 'pending_approval' : pdi.status === 'ajuste_solicitado' ? 'adjustment_requested' : pdi.status === 'concluído' ? 'completed' : pdi.status === 'rascunho' ? 'draft' : pdi.status === 'cancelado' ? 'cancelled' : 'active'}`)}
+                        {t(`pdi.status.${pdi.status === 'pendente_aprovacao' ? 'pending_approval' : pdi.status === 'ajuste_solicitado' ? 'adjustment_requested' : pdi.status === 'concluido' ? 'completed' : pdi.status === 'rascunho' ? 'draft' : pdi.status === 'cancelado' ? 'cancelled' : 'active'}`)}
                       </Badge>
                       <ChevronRight className="w-5 h-5 text-slate-400" />
                     </div>

@@ -43,7 +43,7 @@ describe('Metrics Calculations', () => {
 
       const items = [
         { prazo: pastDate, status: 'pendente' }, // Overdue
-        { prazo: pastDate, status: 'concluida' }, // Completed, not overdue
+        { prazo: pastDate, status: 'concluido' }, // Completed, not overdue
         { prazo: futureDate, status: 'pendente' }, // Future, not overdue
         { status: 'pendente' } // No date, not overdue
       ];

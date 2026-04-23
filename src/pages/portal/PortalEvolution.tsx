@@ -120,7 +120,7 @@ export function PortalEvolution() {
         const metas = metasSnap.docs.map(d => d.data());
         setMetasStats({
           total: metas.length,
-          concluidas: metas.filter((m: any) => m.status === 'concluida').length
+          concluidas: metas.filter((m: any) => m.status === 'concluido').length
         });
 
         setIsLoading(false);
