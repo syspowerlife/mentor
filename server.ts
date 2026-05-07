@@ -29,7 +29,7 @@ const initializeFirebaseAdmin = () => {
     return admin.app();
   }
 
-  if (serviceAccountKey) {
+  if (serviceAccountKey && serviceAccountKey.startsWith('{')) {
     try {
       const serviceAccount = JSON.parse(serviceAccountKey);
       console.log(`Firebase Admin: Initializing with Service Account for project [${serviceAccount.project_id}]`);
