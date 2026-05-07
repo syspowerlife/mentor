@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { Timestamp } from 'firebase/firestore';
 import { useAuth } from '@/lib/AuthContext';
-import { Activity, Target, Calendar, CheckCircle2, TrendingUp, AlertCircle, Users, Filter } from 'lucide-react';
+import { Activity, Target, Calendar, CheckCircle2, TrendingUp, AlertCircle, Users, Filter, Zap } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, AreaChart, Area, LineChart, Line, Legend } from 'recharts';
 import { DashboardSkeleton, ChartSkeleton, CardSkeleton } from '@/components/skeletons/FeedbackSkeletons';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -13,13 +15,19 @@ import { useMetas } from '@/hooks/useMetas';
 import { useSwot } from '@/hooks/useSwot';
 import { useDisc } from '@/hooks/useDisc';
 import { useRodasDaVida } from '@/hooks/useRodasDaVida';
+import { AISuggestionCard } from '@/components/AISuggestionCard';
 import { parseSafeDate, safeFormat, formatDateOrTimestamp } from '@/lib/utils';
+import { MetaStatus } from '@/types/enums';
 
 const COLORS = ['#2563eb', '#16a34a', '#9333ea', '#ea580c', '#4f46e5'];
+
+import { usePlan } from '@/hooks/usePlan';
+import { Progress } from '@/components/ui/progress';
 
 export function Dashboard() {
   const { t } = useTranslation();
   const { user: currentUser } = useAuth();
+  const { plan, isFree } = usePlan();
   const [activeTab, setActiveTab] = useState('geral');
   const [timeFilter, setTimeFilter] = useState('30');
 
@@ -52,9 +60,9 @@ export function Dashboard() {
   const filteredAgendamentos = filterByDate(agendamentos, 'data_inicio', days);
 
   const totalAvaliacoes = filteredRodas.length + filteredSwots.length + filteredDiscs.length;
-  const metasConcluidas = filteredMetas.filter(m => m.status === 'concluido').length;
+  const metasConcluidas = filteredMetas.filter(m => m.status === MetaStatus.CONCLUIDO).length;
   const taxaConclusao = filteredMetas.length ? Math.round((metasConcluidas / filteredMetas.length) * 100) : 0;
-  const metasAtivas = filteredMetas.filter(m => m.status === 'em_andamento').length;
+  const metasAtivas = filteredMetas.filter(m => m.status === MetaStatus.EM_ANDAMENTO).length;
   
   const proximosAgendamentos = agendamentos.filter(a => {
     const data = parseSafeDate(a.data_inicio) || new Date(0);
@@ -71,10 +79,10 @@ export function Dashboard() {
   ].filter(d => d.value > 0);
 
   const metasData = [
-    { name: 'A Fazer', value: filteredMetas.filter(m => m.status === 'a_fazer').length },
+    { name: 'A Fazer', value: filteredMetas.filter(m => m.status === MetaStatus.A_FAZER).length },
     { name: 'Em Andamento', value: metasAtivas },
     { name: 'Concluídas', value: metasConcluidas },
-    { name: 'Pausadas', value: filteredMetas.filter(m => m.status === 'pausada').length },
+    { name: 'Pausadas', value: filteredMetas.filter(m => m.status === MetaStatus.PAUSADA).length },
   ];
 
   const ultimaRoda = rodas.length > 0 ? rodas[0] : null;
@@ -127,10 +135,19 @@ export function Dashboard() {
             <MetricCard title="Total de Avaliações" value={totalAvaliacoes} icon={<Activity />} color="from-blue-500 to-blue-600" />
             <MetricCard title="Taxa de Conclusão" value={`${taxaConclusao}%`} subtext={`${metasConcluidas} de ${metas.length} metas`} icon={<CheckCircle2 />} color="from-green-500 to-green-600" />
             <MetricCard title="Metas Ativas" value={metasAtivas} icon={<Target />} color="from-purple-500 to-purple-600" />
-            <MetricCard title="Próximos Agendamentos" value={proximosAgendamentos} subtext="Próximos 7 dias" icon={<Calendar />} color="from-orange-500 to-orange-600" />
+            <PlanUsageCard />
           </>
         )}
       </div>
+
+      {/* AI Insights Card */}
+      {!loading && (discs.length > 0 || swots.length > 0 || rodas.length > 0) && (
+        <AISuggestionCard 
+          discData={discs[0]} 
+          swotData={swots[0]} 
+          rodaData={rodas[0]} 
+        />
+      )}
 
       {/* Tabs */}
       <div id="dashboard-tabs" className="flex space-x-1 bg-slate-200/50 p-1 rounded-lg w-fit">
@@ -335,6 +352,55 @@ export function Dashboard() {
         </div>
       )}
     </div>
+  );
+}
+
+function PlanUsageCard() {
+  const { plan, planType } = usePlan();
+  const { clientes } = useClients();
+  const navigate = useNavigate();
+
+  const maxClients = plan?.limits.maxClients || 3;
+  const currentClients = clientes.length;
+  const percentage = Math.min((currentClients / maxClients) * 100, 100);
+  const isNearLimit = percentage >= 80;
+
+  return (
+    <Card className="bg-white border-slate-200 shadow-sm overflow-hidden relative group h-full">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm font-bold text-slate-500 uppercase tracking-wider flex items-center justify-between">
+          Plano {plan?.name || 'Free'}
+          {planType === 'free' && <Badge variant="secondary" className="bg-amber-100 text-amber-700 text-[10px]">Upgrade</Badge>}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div>
+          <div className="flex justify-between text-xs font-medium text-slate-600 mb-1.5">
+            <span>Clientes Ativos</span>
+            <span className={isNearLimit ? 'text-amber-600 font-bold' : ''}>
+              {currentClients} / {maxClients > 1000 ? '∞' : maxClients}
+            </span>
+          </div>
+          <Progress value={percentage} className={`h-2 ${isNearLimit ? 'bg-amber-100' : 'bg-slate-100'}`} indicatorClassName={isNearLimit ? 'bg-amber-500' : 'bg-blue-600'} />
+        </div>
+        
+        {planType === 'free' ? (
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="w-full text-blue-600 hover:bg-blue-50 text-xs gap-1.5 h-8 font-bold"
+            onClick={() => navigate('/pricing')}
+          >
+            <Zap className="w-3 h-3" />
+            Liberar mais clientes
+          </Button>
+        ) : (
+          <p className="text-[10px] text-center text-slate-400">
+            Você está usando o plano <span className="font-bold text-slate-500">{plan?.name}</span>.
+          </p>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 

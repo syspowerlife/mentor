@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
 import { User, onAuthStateChanged } from 'firebase/auth';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { auth, db } from './firebase';
@@ -22,33 +22,52 @@ const AuthContext = createContext<AuthContextType>({
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [userData, setUserData] = useState<any | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
-  const loggedRef = React.useRef<string | null>(null);
+  const loggedRef = useRef<string | null>(null);
 
   useEffect(() => {
     let unsubscribeDoc: (() => void) | null = null;
+    let unsubscribeAdmin: (() => void) | null = null;
     let notificationInterval: any = null;
 
     const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
-      // Priorizar a manutenção do estado de carregamento enquanto buscamos dados do Firestore
       if (currentUser) {
         setUser(currentUser);
         setLoading(true);
         
-        // Iniciar verificação periódica de gatilhos de notificações
         notificationInterval = NotificationTriggerService.startBackgroundCheck(currentUser.uid);
         
-        if (unsubscribeDoc) {
-          unsubscribeDoc();
-        }
+        if (unsubscribeDoc) unsubscribeDoc();
+        if (unsubscribeAdmin) unsubscribeAdmin();
+
+        // Check if user is admin in 'admins' collection
+        let adminExists = false;
+        let roleIsAdmin = false;
+
+        const updateIsAdmin = (ae: boolean, ria: boolean) => {
+          setIsAdmin(ae || ria || currentUser.email === 'sys.powerlife@gmail.com');
+        };
+
+        unsubscribeAdmin = onSnapshot(doc(db, 'admins', currentUser.uid), (adminSnap) => {
+          adminExists = adminSnap.exists();
+          updateIsAdmin(adminExists, roleIsAdmin);
+        }, (error) => {
+          console.error("Error listening to admin doc:", error);
+          // If we can't read the admin doc, we assume they're not in the 'admins' collection
+          adminExists = false;
+          updateIsAdmin(adminExists, roleIsAdmin);
+        });
 
         unsubscribeDoc = onSnapshot(doc(db, 'users', currentUser.uid), (docSnap) => {
           if (docSnap.exists()) {
             const data = docSnap.data();
             setUserData(data);
+            roleIsAdmin = data.role === 'admin';
+            updateIsAdmin(adminExists, roleIsAdmin);
             
             // Log admin login once per session UID
-            if (data.role === 'admin' && loggedRef.current !== currentUser.uid) {
+            if (roleIsAdmin && loggedRef.current !== currentUser.uid) {
               loggedRef.current = currentUser.uid;
               AuditLogService.logAction({
                 action: 'LOGIN',
@@ -57,25 +76,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               });
             }
           } else {
-            console.warn("User document not found in Firestore for UID:", currentUser.uid);
             setUserData(null);
+            roleIsAdmin = false;
+            updateIsAdmin(adminExists, roleIsAdmin);
           }
           setLoading(false);
         }, (error) => {
           console.error("Error listening to user doc:", error);
-          // Try to get more info if it's a Firestore error
-          if (error.code === 'permission-denied') {
-            console.error("Permission denied details:", {
-              uid: currentUser.uid,
-              email: currentUser.email,
-              path: `users/${currentUser.uid}`
-            });
-          }
+          // Don't swallow the error, but allow the app to proceed with null userData
+          setUserData(null);
+          roleIsAdmin = false;
+          updateIsAdmin(adminExists, roleIsAdmin);
           setLoading(false);
         });
       } else {
         setUser(null);
         setUserData(null);
+        setIsAdmin(false);
         setLoading(false);
       }
     });
@@ -83,11 +100,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => {
       unsubscribeAuth();
       if (unsubscribeDoc) unsubscribeDoc();
+      if (unsubscribeAdmin) unsubscribeAdmin();
       if (notificationInterval) clearInterval(notificationInterval);
     };
   }, []);
 
-  const isAdmin = userData?.role === 'admin';
+  // Alternative: Derive isAdmin from multiple state pieces if needed, 
+  // but the listeners above should handle it by setting the state.
+  // One small issue is that if one sets true and the other sets false, order matters.
+  // Better to have one state "sourceOfTruth" or just derived.
 
   return (
     <AuthContext.Provider value={{ user, userData, loading, isAdmin }}>

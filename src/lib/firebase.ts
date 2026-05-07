@@ -59,6 +59,8 @@ if (typeof window !== 'undefined') {
     } else if (err.code === 'unimplemented') {
       // The current browser does not support all of the features required to enable persistence
       console.warn('Firestore persistence is not supported by this browser');
+    } else {
+      console.error('Firestore persistence error:', err);
     }
   });
 }

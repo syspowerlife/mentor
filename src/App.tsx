@@ -24,8 +24,10 @@ import { AdminPanel } from './pages/AdminPanel';
 import { Settings } from './pages/Settings';
 import { Clients } from './pages/Clients';
 import { ClientDetail } from './pages/ClientDetail';
+import { Inbox } from './pages/Inbox';
 import { PortalLogin } from './pages/portal/PortalLogin';
 import { PortalDashboard } from './pages/portal/PortalDashboard';
+import { PortalInbox } from './pages/portal/PortalInbox';
 import { PortalEvaluations } from './pages/portal/PortalEvaluations';
 import { PortalEvolution } from './pages/portal/PortalEvolution';
 import { PortalAgendamentos } from './pages/portal/PortalAgendamentos';
@@ -33,6 +35,7 @@ import { Pricing } from './pages/Pricing';
 import { PDIDashboard } from './pages/tools/pdi/PDIDashboard';
 import { PDIDetail } from './pages/tools/pdi/PDIDetail';
 import { PDIApproval } from './pages/tools/pdi/PDIApproval';
+import { ConsolidatedDossier } from './pages/tools/ConsolidatedDossier';
 import { DiarioReflexao } from './pages/tools/DiarioReflexao';
 import { AcompanhamentoProgresso } from './pages/tools/AcompanhamentoProgresso';
 import { AvaliacaoCliente } from './pages/tools/AvaliacaoCliente';
@@ -105,6 +108,7 @@ export default function App() {
               {/* Portal do Cliente */}
               <Route path="/portal/login" element={<PortalLogin />} />
               <Route path="/portal/dashboard" element={<PortalProtectedRoute><PortalDashboard /></PortalProtectedRoute>} />
+              <Route path="/portal/mensagens" element={<PortalProtectedRoute><PortalInbox /></PortalProtectedRoute>} />
               <Route path="/portal/avaliacoes" element={<PortalProtectedRoute><PortalEvaluations /></PortalProtectedRoute>} />
               <Route path="/portal/evolucao" element={<PortalProtectedRoute><PortalEvolution /></PortalProtectedRoute>} />
               <Route path="/portal/agendamentos" element={<PortalProtectedRoute><PortalAgendamentos /></PortalProtectedRoute>} />
@@ -112,13 +116,18 @@ export default function App() {
               <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
                 <Route path="/Inicio" element={<Navigate to="/Dashboard" replace />} />
               <Route path="/Dashboard" element={<Dashboard />} />
+              <Route path="/mensagens" element={<Inbox />} />
               <Route path="/Clientes" element={<Clients />} />
               <Route path="/Clientes/:id" element={<ClientDetail />} />
               <Route path="/RodaDaVida" element={<RodaDaVida />} />
+              <Route path="/RodaDaVida/:id" element={<RodaDaVida />} />
               <Route path="/AnaliseSwot" element={<AnaliseSwot />} />
+              <Route path="/AnaliseSwot/:id" element={<AnaliseSwot />} />
               <Route path="/MetaSmart" element={<MetaSmart />} />
               <Route path="/PerfilDisc" element={<PerfilDisc />} />
+              <Route path="/PerfilDisc/:id" element={<PerfilDisc />} />
               <Route path="/ValoresPessoais" element={<ValoresPessoais />} />
+              <Route path="/ValoresPessoais/:id" element={<ValoresPessoais />} />
               <Route path="/MinhasAvaliacoes" element={<MinhasAvaliacoes />} />
               <Route path="/Perfil" element={<Perfil />} />
               <Route path="/Configuracoes" element={<Settings />} />
@@ -129,10 +138,15 @@ export default function App() {
               <Route path="/ferramentas/pdi/:id" element={<PDIDetail />} />
               <Route path="/ferramentas/pdi/aprovacao" element={<PDIApproval />} />
               <Route path="/ferramentas/diario" element={<DiarioReflexao />} />
+              <Route path="/ferramentas/diario/:id" element={<DiarioReflexao />} />
               <Route path="/ferramentas/progresso" element={<AcompanhamentoProgresso />} />
               <Route path="/ferramentas/avaliacao" element={<AvaliacaoCliente />} />
+              <Route path="/ferramentas/avaliacao/:id" element={<AvaliacaoCliente />} />
+              <Route path="/ferramentas/feedback/:id" element={<AvaliacaoCliente />} />
               <Route path="/notificacoes" element={<NotificationsHistory />} />
               <Route path="/ajuda/manuais" element={<Manuais />} />
+              <Route path="/ferramentas/relatorio-final/:id" element={<ConsolidatedDossier />} />
+              <Route path="/portal/cliente/:id/dossie" element={<ConsolidatedDossier />} />
             </Route>
 
             <Route path="/500" element={<ServerError />} />

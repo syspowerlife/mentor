@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Outlet, Link, useLocation, Navigate } from 'react-router-dom';
-import { Home, LayoutDashboard, Wrench, Calendar, User, Users, FileText, HelpCircle, Settings, Menu, X, ChevronDown, ChevronRight, LogOut, Zap, BookOpen } from 'lucide-react';
+import { Home, LayoutDashboard, Wrench, Calendar, User, Users, FileText, HelpCircle, Settings, Menu, X, ChevronDown, ChevronRight, LogOut, Zap, BookOpen, MessageSquare } from 'lucide-react';
 import { FooterNav } from './FooterNav';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from './ui/collapsible';
 import { Button } from './ui/button';
@@ -8,17 +8,24 @@ import { Sheet, SheetContent, SheetTrigger, SheetTitle } from './ui/sheet';
 import { NotificationCenter } from './NotificationCenter';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { useTranslation } from 'react-i18next';
-import { LanguageSwitcher } from './LanguageSwitcher';
+import { Badge } from './ui/badge';
 import { OnboardingWizard } from './OnboardingWizard';
 import { useAuth } from '@/lib/AuthContext';
 import { logout } from '@/lib/firebase';
 import { useDeadlineChecker } from '@/hooks/useDeadlineChecker';
+import { UserRole, TipoUsuario } from '@/types/enums';
 
 const logoUrl = 'https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68f695b8ca770d93e4eed7a4/6336fe853_POWERLIFE-app-small.png';
+
+import { ApiStatusBanner } from './ApiStatusBanner';
+
+import { usePlan } from '@/hooks/usePlan';
+import { PlanType } from '@/types/enums';
 
 export function Layout() {
   const { t } = useTranslation();
   const { user, userData, loading, isAdmin } = useAuth();
+  const { plan, planType } = usePlan();
   const location = useLocation();
   
   // Initialize automatic deadline monitoring
@@ -59,6 +66,7 @@ export function Layout() {
         <nav id="sidebar-nav" className="flex-1 px-4 space-y-1 overflow-y-auto">
           <NavItem to="/Dashboard" icon={<LayoutDashboard className="w-5 h-5" />} label={t('menu.dashboard')} current={location.pathname} />
           <NavItem to="/Clientes" icon={<Users className="w-5 h-5" />} label={t('menu.clients')} current={location.pathname} />
+          <NavItem to="/mensagens" icon={<MessageSquare className="w-5 h-5" />} label="Mensagens" current={location.pathname} />
           
           <Collapsible id="sidebar-tools" className="w-full">
             <CollapsibleTrigger className="flex items-center justify-between w-full p-2 text-sm font-medium text-slate-700 rounded-md hover:bg-slate-100 transition-colors">
@@ -75,7 +83,7 @@ export function Layout() {
               <NavItem to="/PerfilDisc" label={t('menu.disc')} current={location.pathname} small />
               <NavItem to="/ValoresPessoais" label={t('menu.values')} current={location.pathname} small />
               <NavItem to="/ferramentas/pdi" label={t('menu.pdi')} current={location.pathname} small />
-              {(userData?.role === 'admin' || userData?.tipo_usuario === 'Gestor') && (
+              {(userData?.role === UserRole.ADMIN || userData?.tipo_usuario === TipoUsuario.GESTOR) && (
                 <NavItem to="/ferramentas/pdi/aprovacao" label="Aprovações de PDI" current={location.pathname} small />
               )}
               <NavItem to="/ferramentas/diario" label={t('menu.diary')} current={location.pathname} small />
@@ -98,6 +106,29 @@ export function Layout() {
             </div>
           )}
         </nav>
+
+        {/* Plan Indicator */}
+        {!isAdmin && (
+          <div className="px-4 py-3 mx-4 mb-4 bg-slate-50 border border-slate-100 rounded-xl space-y-2">
+            <div className="flex justify-between items-center">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest text-left">Meu Plano</span>
+              <Badge variant="secondary" className={`text-[10px] px-1.5 py-0 rounded-full font-bold ${
+                planType === PlanType.MASTER ? 'bg-indigo-100 text-indigo-700' :
+                planType === PlanType.PRO ? 'bg-blue-100 text-blue-700' :
+                'bg-slate-200 text-slate-600'
+              }`}>
+                {plan?.name || 'Free'}
+              </Badge>
+            </div>
+            {planType === PlanType.FREE && (
+              <Link to="/pricing" className="block text-[10px] text-blue-600 font-bold hover:underline flex items-center gap-1">
+                <Zap className="w-3 h-3" />
+                Fazer Upgrade
+              </Link>
+            )}
+          </div>
+        )}
+
         <div className="p-4 border-t border-slate-200">
           <Button variant="ghost" className="w-full justify-start text-slate-600" onClick={handleLogout}>
             <LogOut className="w-5 h-5 mr-3" />
@@ -128,6 +159,7 @@ export function Layout() {
             <nav className="flex-1 px-4 py-4 space-y-1 overflow-y-auto">
               <NavItem to="/Dashboard" icon={<LayoutDashboard className="w-5 h-5" />} label={t('menu.dashboard')} current={location.pathname} />
               <NavItem to="/Clientes" icon={<Users className="w-5 h-5" />} label={t('menu.clients')} current={location.pathname} />
+              <NavItem to="/mensagens" icon={<MessageSquare className="w-5 h-5" />} label="Mensagens" current={location.pathname} />
               <div className="py-2">
                 <div className="px-2 text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">{t('menu.tools')}</div>
                 <NavItem to="/RodaDaVida" label={t('menu.roda_da_vida')} current={location.pathname} small />
@@ -136,7 +168,7 @@ export function Layout() {
                 <NavItem to="/PerfilDisc" label={t('menu.disc')} current={location.pathname} small />
                 <NavItem to="/ValoresPessoais" label={t('menu.values')} current={location.pathname} small />
                 <NavItem to="/ferramentas/pdi" label={t('menu.pdi')} current={location.pathname} small />
-                {(userData?.role === 'admin' || userData?.tipo_usuario === 'Gestor') && (
+                {(userData?.role === UserRole.ADMIN || userData?.tipo_usuario === TipoUsuario.GESTOR) && (
                   <NavItem to="/ferramentas/pdi/aprovacao" label="Aprovações de PDI" current={location.pathname} small />
                 )}
                 <NavItem to="/ferramentas/diario" label={t('menu.diary')} current={location.pathname} small />
@@ -198,8 +230,11 @@ export function Layout() {
           </div>
         </header>
 
-        <div className="flex-1">
-          <Outlet />
+        <div className="flex-1 flex flex-col">
+          <ApiStatusBanner />
+          <div className="flex-1">
+            <Outlet />
+          </div>
         </div>
         
         {/* Footer Desktop */}

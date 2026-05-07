@@ -3,6 +3,7 @@ import { collection, query, where, orderBy, onSnapshot, limit } from 'firebase/f
 import { db, handleFirestoreError, OperationType } from '@/lib/firebase';
 import { useAuth } from '@/lib/AuthContext';
 import { markNotificationAsRead, markAllNotificationsAsRead } from '@/lib/notifications';
+import { toast } from 'sonner';
 
 export interface Notification {
   id: string;
@@ -37,15 +38,30 @@ export function useNotifications() {
       limit(50)
     );
 
+    let isInitialLoad = true;
+
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const data = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       })) as Notification[];
       
+      if (!isInitialLoad) {
+        snapshot.docChanges().forEach((change) => {
+          if (change.type === 'added') {
+            const notified = change.doc.data() as Notification;
+            toast(notified.title, {
+              description: notified.message,
+              duration: 5000,
+            });
+          }
+        });
+      }
+
       setNotifications(data);
       setUnreadCount(data.filter(n => !n.read).length);
       setLoading(false);
+      isInitialLoad = false;
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, path);
       setLoading(false);

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -30,26 +31,29 @@ import { Plus, GripVertical, Calendar, Target, Pencil, Trash2, MessageSquare } f
 import { toast } from 'sonner';
 import { DeleteConfirmDialog } from '@/components/DeleteConfirmDialog';
 import { metaSmartSchema, MetaSmartFormData } from '@/types/schemas';
+import { MetaStatus, NotificationType } from '@/types/enums';
 import { sendNotification } from '@/lib/notifications';
 
-const COLUMNS = {
-  a_fazer: { id: 'a_fazer', title: 'A Fazer', color: 'bg-slate-100' },
-  em_andamento: { id: 'em_andamento', title: 'Em Andamento', color: 'bg-blue-50' },
-  concluido: { id: 'concluido', title: 'Concluída', color: 'bg-green-50' },
-  pausada: { id: 'pausada', title: 'Pausada', color: 'bg-orange-50' },
-  pendente: { id: 'pendente', title: 'Pendente', color: 'bg-yellow-50' }
-};
-
 export function MetaSmart() {
+  const { t } = useTranslation();
   const { user, userData } = useAuth();
   const [searchParams] = useSearchParams();
   const clienteId = searchParams.get('clienteId');
+  const clienteUid = searchParams.get('clienteUid');
   
   const [metas, setMetas] = useState<any[]>([]);
   const [sessoes, setSessoes] = useState<any[]>([]);
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [editingMeta, setEditingMeta] = useState<any>(null);
   const [deletingMetaId, setDeletingMetaId] = useState<string | null>(null);
+
+  const COLUMNS = {
+    [MetaStatus.A_FAZER]: { id: MetaStatus.A_FAZER, title: t('smart.kanban.to_do'), color: 'bg-slate-100' },
+    [MetaStatus.EM_ANDAMENTO]: { id: MetaStatus.EM_ANDAMENTO, title: t('smart.kanban.in_progress'), color: 'bg-blue-50' },
+    [MetaStatus.CONCLUIDO]: { id: MetaStatus.CONCLUIDO, title: t('smart.kanban.completed'), color: 'bg-green-50' },
+    [MetaStatus.PAUSADA]: { id: MetaStatus.PAUSADA, title: t('smart.kanban.paused'), color: 'bg-orange-50' },
+    [MetaStatus.PENDENTE]: { id: MetaStatus.PENDENTE, title: t('smart.kanban.pending'), color: 'bg-yellow-50' }
+  };
 
   // Load metas in real-time
   useEffect(() => {
@@ -62,9 +66,6 @@ export function MetaSmart() {
       orderBy('created_at', 'desc')
     );
 
-    // If we have a clienteId, we might want to filter by it, 
-    // but the Kanban usually shows all metas for the mentor or all for a specific client.
-    // Let's filter by client if provided.
     if (clienteId) {
       q = query(
         collection(db, path),
@@ -122,7 +123,7 @@ export function MetaSmart() {
   } = useForm<MetaSmartFormData>({
     resolver: zodResolver(metaSmartSchema),
     defaultValues: {
-      status: 'a_fazer'
+      status: MetaStatus.A_FAZER
     }
   });
 
@@ -133,8 +134,10 @@ export function MetaSmart() {
         await addDoc(collection(db, path), {
           ...novaMeta,
           created_by: user?.uid,
+          profissional_id: user?.uid,
           created_at: Timestamp.now(),
-          cliente_id: clienteId || null
+          cliente_id: clienteId || null,
+          cliente_uid: clienteUid || null
         });
       } catch (error) {
         handleFirestoreError(error, OperationType.CREATE, path);
@@ -143,14 +146,14 @@ export function MetaSmart() {
     onSuccess: (_, variables) => {
       setIsAddOpen(false);
       reset();
-      toast.success('Meta criada com sucesso!');
+      toast.success(t('smart.success.created'));
       
       if (user) {
         sendNotification({
           userId: user.uid,
-          title: 'Nova Meta SMART',
-          message: `A meta "${variables.titulo}" foi definida com sucesso.`,
-          type: 'success'
+          title: t('smart.notifications.new_title'),
+          message: t('smart.notifications.new_msg', { titulo: variables.titulo }),
+          type: NotificationType.SUCCESS
         });
       }
     },
@@ -169,17 +172,17 @@ export function MetaSmart() {
     },
     onSuccess: (_, variables) => {
       setEditingMeta(null);
-      toast.success('Meta atualizada!');
+      toast.success(t('smart.success.updated'));
 
-      if (variables.data.status === 'concluido' && user) {
+      if (variables.data.status === MetaStatus.CONCLUIDO && user) {
         const preferences = userData?.notification_preferences || { goals: true };
         
         if (preferences.goals !== false) {
           sendNotification({
             userId: user.uid,
-            title: 'Meta Concluída! 🎉',
-            message: 'Parabéns por atingir seu objetivo. Continue com esse foco!',
-            type: 'success',
+            title: t('smart.notifications.completed_title'),
+            message: t('smart.notifications.completed_msg'),
+            type: NotificationType.SUCCESS,
             link: '/MetaSmart'
           });
         }
@@ -200,7 +203,7 @@ export function MetaSmart() {
     },
     onSuccess: () => {
       setDeletingMetaId(null);
-      toast.success('Meta excluída!');
+      toast.success(t('smart.success.deleted'));
     },
     onError: (error: any) => toast.error(error.message || 'Erro ao excluir meta.')
   });
@@ -226,7 +229,7 @@ export function MetaSmart() {
   };
 
   const getMetasByStatus = (statusId: string) => {
-    return metas.filter((m: any) => (m.status || 'a_fazer') === statusId);
+    return metas.filter((m: any) => (m.status || MetaStatus.A_FAZER) === statusId);
   };
 
   return (
@@ -235,76 +238,76 @@ export function MetaSmart() {
         <div>
           <h1 className="text-3xl font-bold text-slate-800 flex items-center gap-3">
             <Target className="w-8 h-8 text-blue-600" />
-            Metas SMART
+            {t('smart.title')}
           </h1>
-          <p className="text-slate-500 mt-1">Acompanhe suas metas através do quadro Kanban.</p>
+          <p className="text-slate-500 mt-1">{t('smart.subtitle')}</p>
         </div>
         <div className="flex gap-3">
-          <ExportPdfButton targetId="print-meta" filename="meta-smart" title="Relatório: Meta SMART" />
+          <ExportPdfButton targetId="print-meta" filename="meta-smart" title={`Relatório: ${t('smart.title')}`} />
           <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
             <DialogTrigger asChild>
               <Button className="bg-blue-600 hover:bg-blue-700">
-                <Plus className="w-4 h-4 mr-2" /> Nova Meta
+                <Plus className="w-4 h-4 mr-2" /> {t('smart.new_goal')}
               </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
               <DialogHeader>
-                <DialogTitle>Criar Nova Meta SMART</DialogTitle>
+                <DialogTitle>{t('smart.form.create_title')}</DialogTitle>
               </DialogHeader>
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 py-4">
                 <div className="space-y-2">
-                  <Label>Título da Meta</Label>
-                  <Input {...register('titulo')} placeholder="Ex: Aumentar faturamento em 20%" />
+                  <Label>{t('smart.form.title_label')}</Label>
+                  <Input {...register('titulo')} placeholder={t('smart.form.title_placeholder')} />
                   {errors.titulo && <p className="text-xs text-red-500">{errors.titulo.message}</p>}
                 </div>
                 
                 <div className="space-y-2">
-                  <Label className="text-blue-600 font-bold">S - Específica (Specific)</Label>
-                  <Input {...register('especifica')} placeholder="O que exatamente você quer alcançar?" />
+                  <Label className="text-blue-600 font-bold">{t('smart.form.s')}</Label>
+                  <Input {...register('especifica')} placeholder={t('smart.form.s')} />
                 </div>
                 
                 <div className="space-y-2">
-                  <Label className="text-green-600 font-bold">M - Mensurável (Measurable)</Label>
-                  <Input {...register('mensuravel')} placeholder="Como você vai medir o progresso?" />
+                  <Label className="text-green-600 font-bold">{t('smart.form.m')}</Label>
+                  <Input {...register('mensuravel')} placeholder={t('smart.form.m')} />
                 </div>
                 
                 <div className="space-y-2">
-                  <Label className="text-purple-600 font-bold">A - Atingível (Achievable)</Label>
-                  <Input {...register('atingivel')} placeholder="É realista e possível de alcançar?" />
+                  <Label className="text-purple-600 font-bold">{t('smart.form.a')}</Label>
+                  <Input {...register('atingivel')} placeholder={t('smart.form.a')} />
                 </div>
                 
                 <div className="space-y-2">
-                  <Label className="text-orange-600 font-bold">R - Relevante (Relevant)</Label>
-                  <Input {...register('relevante')} placeholder="Por que isso é importante agora?" />
+                  <Label className="text-orange-600 font-bold">{t('smart.form.r')}</Label>
+                  <Input {...register('relevante')} placeholder={t('smart.form.r')} />
                 </div>
                 
                 <div className="space-y-2">
-                  <Label className="text-red-600 font-bold">T - Temporal (Time-bound)</Label>
-                  <Input {...register('temporal')} placeholder="Qual é o prazo final?" />
+                  <Label className="text-red-600 font-bold">{t('smart.form.t')}</Label>
+                  <Input {...register('temporal')} placeholder={t('smart.form.t')} />
                 </div>
 
                 <div className="grid grid-cols-2 gap-4 pt-2">
                   <div className="space-y-2">
-                    <Label>Data Limite</Label>
+                    <Label>{t('smart.form.deadline')}</Label>
                     <Input type="date" {...register('prazo')} />
                   </div>
                   <div className="space-y-2">
-                    <Label>Status Inicial</Label>
+                    <Label>{t('smart.form.status')}</Label>
                     <Select value={watch('status')} onValueChange={v => setValue('status', v as any)}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="a_fazer">A Fazer</SelectItem>
-                        <SelectItem value="em_andamento">Em Andamento</SelectItem>
-                        <SelectItem value="pendente">Pendente</SelectItem>
-                        <SelectItem value="concluido">Concluída</SelectItem>
-                        <SelectItem value="pausada">Pausada</SelectItem>
+                        <SelectItem value={MetaStatus.A_FAZER}>{t('smart.kanban.to_do')}</SelectItem>
+                        <SelectItem value={MetaStatus.EM_ANDAMENTO}>{t('smart.kanban.in_progress')}</SelectItem>
+                        <SelectItem value={MetaStatus.PENDENTE}>{t('smart.kanban.pending')}</SelectItem>
+                        <SelectItem value={MetaStatus.CONCLUIDO}>{t('smart.kanban.completed')}</SelectItem>
+                        <SelectItem value={MetaStatus.PAUSADA}>{t('smart.kanban.paused')}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                 </div>
 
                 <Button type="submit" className="w-full mt-4 bg-blue-600 hover:bg-blue-700" disabled={createMutation.isPending}>
-                  {createMutation.isPending ? 'Salvando...' : 'Salvar Meta'}
+                  {createMutation.isPending ? t('smart.form.saving') : t('smart.form.save')}
                 </Button>
               </form>
             </DialogContent>
@@ -401,6 +404,7 @@ export function MetaSmart() {
 }
 
 function EditMetaModal({ isOpen, onClose, meta, onSave, isLoading }: any) {
+  const { t } = useTranslation();
   const {
     register,
     handleSubmit,
@@ -422,7 +426,7 @@ function EditMetaModal({ isOpen, onClose, meta, onSave, isLoading }: any) {
         relevante: meta.relevante || '',
         temporal: meta.temporal || '',
         prazo: meta.prazo || '',
-        status: meta.status || 'a_fazer'
+        status: meta.status || MetaStatus.A_FAZER
       });
     }
   }, [meta, reset]);
@@ -431,64 +435,64 @@ function EditMetaModal({ isOpen, onClose, meta, onSave, isLoading }: any) {
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Editar Meta SMART</DialogTitle>
+          <DialogTitle>{t('smart.form.edit_title')}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit(onSave)} className="space-y-4 py-4">
           <div className="space-y-2">
-            <Label>Título da Meta</Label>
+            <Label>{t('smart.form.title_label')}</Label>
             <Input {...register('titulo')} />
             {errors.titulo && <p className="text-xs text-red-500">{errors.titulo.message}</p>}
           </div>
           
           <div className="space-y-2">
-            <Label className="text-blue-600 font-bold">S - Específica</Label>
+            <Label className="text-blue-600 font-bold">{t('smart.form.s')}</Label>
             <Input {...register('especifica')} />
           </div>
           
           <div className="space-y-2">
-            <Label className="text-green-600 font-bold">M - Mensurável</Label>
+            <Label className="text-green-600 font-bold">{t('smart.form.m')}</Label>
             <Input {...register('mensuravel')} />
           </div>
           
           <div className="space-y-2">
-            <Label className="text-purple-600 font-bold">A - Atingível</Label>
+            <Label className="text-purple-600 font-bold">{t('smart.form.a')}</Label>
             <Input {...register('atingivel')} />
           </div>
           
           <div className="space-y-2">
-            <Label className="text-orange-600 font-bold">R - Relevante</Label>
+            <Label className="text-orange-600 font-bold">{t('smart.form.r')}</Label>
             <Input {...register('relevante')} />
           </div>
           
           <div className="space-y-2">
-            <Label className="text-red-600 font-bold">T - Temporal</Label>
+            <Label className="text-red-600 font-bold">{t('smart.form.t')}</Label>
             <Input {...register('temporal')} />
           </div>
 
           <div className="grid grid-cols-2 gap-4 pt-2">
             <div className="space-y-2">
-              <Label>Data Limite</Label>
+              <Label>{t('smart.form.deadline')}</Label>
               <Input type="date" {...register('prazo')} />
             </div>
             <div className="space-y-2">
-              <Label>Status</Label>
+              <Label>{t('smart.form.status')}</Label>
               <Select value={watch('status')} onValueChange={v => setValue('status', v as any)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="a_fazer">A Fazer</SelectItem>
-                  <SelectItem value="em_andamento">Em Andamento</SelectItem>
-                  <SelectItem value="concluido">Concluída</SelectItem>
-                  <SelectItem value="pausada">Pausada</SelectItem>
-                  <SelectItem value="pendente">Pendente</SelectItem>
+                  <SelectItem value={MetaStatus.A_FAZER}>{t('smart.kanban.to_do')}</SelectItem>
+                  <SelectItem value={MetaStatus.EM_ANDAMENTO}>{t('smart.kanban.in_progress')}</SelectItem>
+                  <SelectItem value={MetaStatus.CONCLUIDO}>{t('smart.kanban.completed')}</SelectItem>
+                  <SelectItem value={MetaStatus.PAUSADA}>{t('smart.kanban.paused')}</SelectItem>
+                  <SelectItem value={MetaStatus.PENDENTE}>{t('smart.kanban.pending')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </div>
 
           <div className="flex justify-end gap-3 pt-4">
-            <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>
+            <Button type="button" variant="outline" onClick={onClose}>{t('common.cancel')}</Button>
             <Button type="submit" disabled={isLoading}>
-              {isLoading ? 'Salvando...' : 'Salvar Alterações'}
+              {isLoading ? t('smart.form.saving') : t('common.save_changes')}
             </Button>
           </div>
         </form>

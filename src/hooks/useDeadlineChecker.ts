@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { collection, query, where, onSnapshot, Timestamp } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, Timestamp, or, and } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/lib/AuthContext';
 import { sendNotification } from '@/lib/notifications';
@@ -73,7 +73,14 @@ export function useDeadlineChecker() {
     const unsubAcoes = onSnapshot(
       query(
         collection(db, 'pdi_acoes'),
-        where('status', 'in', ['pendente', 'em_andamento'])
+        and(
+          where('status', 'in', ['pendente', 'em_andamento']),
+          or(
+            where('profissional_id', '==', user.uid),
+            where('cliente_uid', '==', user.uid),
+            where('created_by', '==', user.uid)
+          )
+        )
       ),
       (snapshot) => {
         const now = new Date();

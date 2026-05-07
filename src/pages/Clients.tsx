@@ -18,13 +18,20 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { DeleteConfirmDialog } from '@/components/DeleteConfirmDialog';
 import { clienteSchema, ClienteFormData } from '@/types/schemas';
+import { ClienteStatus } from '@/types/enums';
 import { CardListSkeleton } from '@/components/skeletons/FeedbackSkeletons';
 import { sendNotification } from '@/lib/notifications';
+
+import { usePlan } from '@/hooks/usePlan';
+import { PlanGate } from '@/components/PlanGate';
+import { UpgradeModal } from '@/components/UpgradeModal';
 
 export function Clients() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { canAddClient, plan } = usePlan();
   const [isAddOpen, setIsAddOpen] = useState(false);
+  const [isUpgradeOpen, setIsUpgradeOpen] = useState(false);
   const [editingCliente, setEditingCliente] = useState<any>(null);
   const [deletingClienteId, setDeletingClienteId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -40,9 +47,17 @@ export function Clients() {
   } = useForm<ClienteFormData>({
     resolver: zodResolver(clienteSchema),
     defaultValues: {
-      status: 'ativo'
+      status: ClienteStatus.ATIVO
     }
   });
+
+  const handleOpenAdd = () => {
+    if (!canAddClient(clientes.length)) {
+      setIsUpgradeOpen(true);
+      return;
+    }
+    setIsAddOpen(true);
+  };
 
   const createMutation = useMutation({
     mutationFn: async (novoCliente: any) => {
@@ -136,9 +151,16 @@ export function Clients() {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold text-slate-800">Meus Clientes</h1>
-          <p className="text-slate-500 mt-1">Gerencie seus clientes e acompanhe o progresso.</p>
+          <div className="flex items-center gap-2 mt-1">
+            <p className="text-slate-500">Gerencie seus clientes e acompanhe o progresso.</p>
+            {plan && (
+              <Badge variant="outline" className="text-[10px] uppercase tracking-tighter text-slate-400 border-slate-200">
+                {clientes.length} / {plan.limits.maxClients > 1000 ? '∞' : plan.limits.maxClients}
+              </Badge>
+            )}
+          </div>
         </div>
-        <Button onClick={() => setIsAddOpen(true)} className="bg-blue-600 hover:bg-blue-700">
+        <Button onClick={handleOpenAdd} className="bg-blue-600 hover:bg-blue-700">
           <UserPlus className="w-4 h-4 mr-2" />
           Novo Cliente
         </Button>
@@ -163,8 +185,8 @@ export function Clients() {
                     {cliente.nome.charAt(0).toUpperCase()}
                   </div>
                   <div className="flex flex-col items-end gap-2">
-                    <Badge variant={cliente.status === 'ativo' ? 'success' : 'secondary'} className={cliente.status === 'ativo' ? 'bg-green-100 text-green-700' : ''}>
-                      {cliente.status === 'ativo' ? 'Ativo' : 'Inativo'}
+                    <Badge variant={cliente.status === ClienteStatus.ATIVO ? 'success' : 'secondary'} className={cliente.status === ClienteStatus.ATIVO ? 'bg-green-100 text-green-700' : ''}>
+                      {cliente.status === ClienteStatus.ATIVO ? 'Ativo' : 'Inativo'}
                     </Badge>
                     <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button onClick={() => setEditingCliente(cliente)} className="text-slate-400 hover:text-blue-600"><Pencil className="w-4 h-4" /></button>
@@ -208,6 +230,15 @@ export function Clients() {
           )}
         </div>
 
+      {/* Upgrade Modal */}
+      <UpgradeModal 
+        isOpen={isUpgradeOpen} 
+        onClose={() => setIsUpgradeOpen(false)}
+        title="Limite de Clientes Atingido"
+        description={`Seu plano atual permite até ${plan?.limits.maxClients} clientes ativos. Faça o upgrade para continuar crescendo!`}
+        feature="Clientes ilimitados"
+      />
+
       {/* Add Dialog */}
       <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
         <DialogContent className="sm:max-w-[425px]">
@@ -234,8 +265,8 @@ export function Clients() {
               <Select value={watch('status')} onValueChange={v => setValue('status', v as any)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="ativo">Ativo</SelectItem>
-                  <SelectItem value="inativo">Inativo</SelectItem>
+                  <SelectItem value={ClienteStatus.ATIVO}>Ativo</SelectItem>
+                  <SelectItem value={ClienteStatus.INATIVO}>Inativo</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -287,7 +318,7 @@ function EditClienteModal({ isOpen, onClose, cliente, onSave, isLoading }: any) 
         nome: cliente.nome,
         email: cliente.email,
         telefone: cliente.telefone || '',
-        status: cliente.status || 'ativo'
+        status: cliente.status || ClienteStatus.ATIVO
       });
     }
   }, [cliente, reset]);
@@ -318,8 +349,8 @@ function EditClienteModal({ isOpen, onClose, cliente, onSave, isLoading }: any) 
             <Select value={watch('status')} onValueChange={v => setValue('status', v as any)}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="ativo">Ativo</SelectItem>
-                <SelectItem value="inativo">Inativo</SelectItem>
+                <SelectItem value={ClienteStatus.ATIVO}>Ativo</SelectItem>
+                <SelectItem value={ClienteStatus.INATIVO}>Inativo</SelectItem>
               </SelectContent>
             </Select>
           </div>

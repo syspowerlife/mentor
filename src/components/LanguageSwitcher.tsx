@@ -15,6 +15,7 @@ export function LanguageSwitcher() {
   const languages = [
     { code: 'pt', name: 'Português', flag: '🇧🇷' },
     { code: 'en', name: 'English', flag: '🇺🇸' },
+    { code: 'es', name: 'Español', flag: '🇪🇸' },
   ];
 
   const currentLanguage = languages.find(l => l.code === i18n.language.split('-')[0]) || languages[0];

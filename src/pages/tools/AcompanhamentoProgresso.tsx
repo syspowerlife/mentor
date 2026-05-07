@@ -10,7 +10,9 @@ import {
   updateDoc, 
   doc, 
   Timestamp,
-  deleteDoc
+  deleteDoc,
+  or,
+  and
 } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '@/lib/firebase';
 import { useAuth } from '@/lib/AuthContext';
@@ -27,10 +29,12 @@ import { TrendingUp, Target, Activity, Calendar, Filter, Plus, Edit, Trash2, Mes
 import { HistoryLineChart } from '@/components/HistoryLineChart';
 import { motion } from 'motion/react';
 import { format, subMonths, parseISO, isAfter } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { ptBR, enUS, es } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { ToolSkeleton } from '@/components/skeletons/FeedbackSkeletons';
 import { parseSafeDate, safeFormat, formatDateOrTimestamp } from '@/lib/utils';
+import { MetaStatus, SessaoStatus } from '@/types/enums';
+import { useTranslation } from 'react-i18next';
 
 const AREAS = [
   'saude_fisica', 'desenvolvimento_mental', 'inteligencia_emocional', 'familia',
@@ -40,8 +44,10 @@ const AREAS = [
 
 export function AcompanhamentoProgresso() {
   const { user } = useAuth();
+  const { t, i18n } = useTranslation();
   const [searchParams] = useSearchParams();
   const clienteId = searchParams.get('clienteId');
+  const clienteUid = searchParams.get('clienteUid');
 
   const [loading, setLoading] = useState(true);
   const [rodas, setRodas] = useState<any[]>([]);
@@ -74,45 +80,80 @@ export function AcompanhamentoProgresso() {
     // Rodas da Vida
     const rodasQuery = query(
       collection(db, 'rodas_da_vida'),
-      where('created_by', '==', user.uid),
-      ...(clienteId ? [where('cliente_id', '==', clienteId)] : []),
-      orderBy('created_date', 'asc')
+      and(
+        or(
+          where('profissional_id', '==', user.uid),
+          where('created_by', '==', user.uid),
+          where('cliente_uid', '==', user.uid),
+          where('cliente_id', '==', user.uid),
+          where('user_id', '==', user.uid)
+        ),
+        ...(clienteId ? [where('cliente_id', '==', clienteId)] : [])
+      ),
+      orderBy('created_date', 'desc')
     );
     unsubscribes.push(onSnapshot(rodasQuery, (snap) => {
       setRodas(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-    }));
+    }, (error) => handleFirestoreError(error, OperationType.LIST, 'rodas_da_vida')));
 
     // Metas SMART
     const metasQuery = query(
       collection(db, 'metas_smart'),
-      where('created_by', '==', user.uid),
-      ...(clienteId ? [where('cliente_id', '==', clienteId)] : [])
+      and(
+        or(
+          where('profissional_id', '==', user.uid),
+          where('created_by', '==', user.uid),
+          where('cliente_uid', '==', user.uid),
+          where('cliente_id', '==', user.uid),
+          where('user_id', '==', user.uid)
+        ),
+        ...(clienteId ? [where('cliente_id', '==', clienteId)] : [])
+      )
     );
     unsubscribes.push(onSnapshot(metasQuery, (snap) => {
       setMetas(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-    }));
+    }, (error) => handleFirestoreError(error, OperationType.LIST, 'metas_smart')));
 
     // Diário de Reflexão
     const reflexoesQuery = query(
       collection(db, 'diarios_reflexao'),
-      where('created_by', '==', user.uid)
+      and(
+        or(
+          where('profissional_id', '==', user.uid),
+          where('created_by', '==', user.uid),
+          where('cliente_uid', '==', user.uid),
+          where('cliente_id', '==', user.uid),
+          where('user_id', '==', user.uid)
+        ),
+        ...(clienteUid ? [where('is_private', '==', false)] : []),
+        ...(clienteId ? [where('cliente_id', '==', clienteId)] : [])
+      )
     );
     unsubscribes.push(onSnapshot(reflexoesQuery, (snap) => {
       setReflexoes(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-    }));
+    }, (error) => handleFirestoreError(error, OperationType.LIST, 'diarios_reflexao')));
 
     // Sessões de Mentoring
     const sessoesQuery = query(
       collection(db, 'sessoes_mentoring'),
-      where('created_by', '==', user.uid),
-      ...(clienteId ? [where('cliente_id', '==', clienteId)] : []),
+      and(
+        or(
+          where('profissional_id', '==', user.uid),
+          where('created_by', '==', user.uid),
+          where('cliente_uid', '==', user.uid),
+          where('mentor_id', '==', user.uid),
+          where('cliente_id', '==', user.uid),
+          where('user_id', '==', user.uid)
+        ),
+        ...(clienteId ? [where('cliente_id', '==', clienteId)] : [])
+      ),
       orderBy('data', 'asc')
     );
     unsubscribes.push(onSnapshot(sessoesQuery, (snap) => {
       setSessoes(snap.docs.map(d => ({ id: d.id, ...d.data() })));
       setLoading(false);
     }, (error) => {
-      console.error("Error loading sessions:", error);
+      handleFirestoreError(error, OperationType.LIST, 'sessoes_mentoring');
       setLoading(false);
     }));
 
@@ -132,10 +173,12 @@ export function AcompanhamentoProgresso() {
           await addDoc(collection(db, path), {
             ...data,
             cliente_id: clienteId || null,
+            cliente_uid: clienteUid || null,
             mentor_id: user?.uid,
             created_by: user?.uid,
+            profissional_id: user?.uid,
             data: parseSafeDate(data.data)?.toISOString() || new Date().toISOString(),
-            status: 'realizada'
+            status: SessaoStatus.REALIZADA
           });
         }
       } catch (error) {
@@ -146,25 +189,26 @@ export function AcompanhamentoProgresso() {
       setIsSessaoDialogOpen(false);
       setEditingSessao(null);
       setSessaoForm({ titulo: '', notas: '', progresso: 5, data: format(new Date(), 'yyyy-MM-dd'), meta_ids: [] });
-      toast.success(editingSessao ? 'Sessão atualizada!' : 'Sessão registrada!');
+      toast.success(editingSessao ? t('progress.sessions.success.updated') : t('progress.sessions.success.registered'));
     },
-    onError: (error: any) => toast.error(error.message || 'Erro ao salvar sessão.')
+    onError: (error: any) => toast.error(error.message || t('progress.sessions.form.save_error'))
   });
 
   const deleteSessaoMutation = useMutation({
     mutationFn: async (id: string) => {
       await deleteDoc(doc(db, 'sessoes_mentoring', id));
     },
-    onSuccess: () => toast.success('Sessão excluída.'),
-    onError: (error: any) => toast.error(error.message || 'Erro ao excluir sessão.')
+    onSuccess: () => toast.success(t('progress.sessions.success.deleted')),
+    onError: (error: any) => toast.error(error.message || t('progress.sessions.form.delete_error'))
   });
 
   const timelineData = useMemo(() => {
+    const dateLocale = i18n.language === 'pt' ? ptBR : i18n.language === 'es' ? es : enUS;
     const months = Array.from({ length: 6 }).map((_, i) => {
       const date = subMonths(new Date(), 5 - i);
       return {
         key: format(date, 'yyyy-MM'),
-        label: format(date, 'MMM', { locale: ptBR }),
+        label: format(date, 'MMM', { locale: dateLocale }),
         roda: 0,
         rodaCount: 0,
         metas: 0,
@@ -187,7 +231,7 @@ export function AcompanhamentoProgresso() {
     });
 
     metas.forEach((m: any) => {
-      if (m.status === 'concluido') {
+      if (m.status === MetaStatus.CONCLUIDO) {
         const date = parseSafeDate(m.data_conclusao || m.created_at) || new Date(0);
         const key = format(date, 'yyyy-MM');
         const month = months.find(m => m.key === key);
@@ -233,15 +277,16 @@ export function AcompanhamentoProgresso() {
     const prevAvg = prevRoda ? AREAS.reduce((acc, area) => acc + (prevRoda[area] || 0), 0) / AREAS.length : 0;
     const diff = currentAvg - prevAvg;
 
-    const completedMetas = metas.filter((m: any) => m.status === 'concluido').length;
+    const completedMetas = metas.filter((m: any) => m.status === MetaStatus.CONCLUIDO).length;
     
     return {
       rodaAvg: currentAvg.toFixed(1),
       rodaDiff: diff > 0 ? `+${diff.toFixed(1)}` : diff.toFixed(1),
       metasTotal: completedMetas,
-      crescimento: diff > 0 ? `${((diff / (prevAvg || 1)) * 100).toFixed(0)}%` : '0%'
+      crescimento: diff > 0 ? `${((diff / (prevAvg || 1)) * 100).toFixed(0)}%` : '0%',
+      rodaDiffLabel: `${diff > 0 ? `+${diff.toFixed(1)}` : diff.toFixed(1)} ${t('progress.stats.vs_previous')}`
     };
-  }, [rodas, metas]);
+  }, [rodas, metas, t]);
 
   if (loading) return <ToolSkeleton />;
 
@@ -251,38 +296,38 @@ export function AcompanhamentoProgresso() {
         <div>
           <h1 className="text-3xl font-bold text-slate-800 flex items-center gap-3">
             <TrendingUp className="w-8 h-8 text-blue-600" />
-            Acompanhamento de Progresso
+            {t('progress.title')}
           </h1>
-          <p className="text-slate-500 mt-1">Visualize a evolução dos indicadores e metas ao longo do tempo.</p>
+          <p className="text-slate-500 mt-1">{t('progress.description')}</p>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" className="text-slate-600">
-            <Calendar className="w-4 h-4 mr-2" /> Últimos 6 meses
+            <Calendar className="w-4 h-4 mr-2" /> {t('progress.filters.last_6_months')}
           </Button>
           <Button onClick={() => { setEditingSessao(null); setIsSessaoDialogOpen(true); }} size="sm" className="bg-blue-600 hover:bg-blue-700">
-            <Plus className="w-4 h-4 mr-2" /> Registrar Sessão
+            <Plus className="w-4 h-4 mr-2" /> {t('progress.sessions.register_btn')}
           </Button>
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <StatCard 
-          title="Média Roda da Vida (Atual)" 
+          title={t('progress.stats.roda_avg')} 
           value={stats.rodaAvg} 
-          subValue={`${stats.rodaDiff} vs anterior`}
+          subValue={stats.rodaDiffLabel}
           icon={<Activity className="w-4 h-4 text-blue-500" />}
           trend={Number(stats.rodaDiff) >= 0 ? 'up' : 'down'}
         />
         <StatCard 
-          title="Metas Concluídas (Total)" 
+          title={t('progress.stats.metas_completed')} 
           value={stats.metasTotal.toString()} 
-          subValue="acumulado no período"
+          subValue={t('progress.stats.accumulated')}
           icon={<Target className="w-4 h-4 text-green-500" />}
         />
         <StatCard 
-          title="Taxa de Crescimento" 
+          title={t('progress.stats.growth_rate')} 
           value={stats.crescimento} 
-          subValue="baseado na Roda da Vida"
+          subValue={t('progress.stats.based_on_roda')}
           icon={<TrendingUp className="w-4 h-4 text-orange-500" />}
           trend="up"
         />
@@ -293,8 +338,8 @@ export function AcompanhamentoProgresso() {
           <CardHeader className="bg-white border-b border-slate-50">
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle className="text-xl">Evolução Longitudinal</CardTitle>
-                <CardDescription>Cruzamento de indicadores de bem-estar e produtividade</CardDescription>
+                <CardTitle className="text-xl">{t('progress.charts.longitudinal')}</CardTitle>
+                <CardDescription>{t('progress.charts.indicators_desc')}</CardDescription>
               </div>
             </div>
           </CardHeader>
@@ -302,9 +347,9 @@ export function AcompanhamentoProgresso() {
             <HistoryLineChart 
               data={timelineData} 
               series={[
-                { key: 'rodaDaVida', name: 'Roda da Vida', color: '#3b82f6' },
-                { key: 'humorMedio', name: 'Humor (Diário)', color: '#f59e0b' },
-                { key: 'progressoSessao', name: 'Progresso Sessão', color: '#8b5cf6' },
+                { key: 'rodaDaVida', name: t('progress.charts.roda_vida'), color: '#3b82f6' },
+                { key: 'humorMedio', name: t('progress.charts.humor_diario'), color: '#f59e0b' },
+                { key: 'progressoSessao', name: t('progress.charts.progresso_sessao'), color: '#8b5cf6' },
               ]}
               yDomain={[0, 10]}
             />
@@ -313,8 +358,8 @@ export function AcompanhamentoProgresso() {
 
         <Card className="border-none shadow-xl shadow-slate-200/50 overflow-hidden">
           <CardHeader className="bg-white border-b border-slate-50">
-            <CardTitle className="text-xl">Metas Concluídas</CardTitle>
-            <CardDescription>Volume mensal de entregas</CardDescription>
+            <CardTitle className="text-xl">{t('progress.charts.metas')}</CardTitle>
+            <CardDescription>{t('progress.charts.deliveries_volume')}</CardDescription>
           </CardHeader>
           <CardContent className="p-6">
             <div className="h-[350px] w-full">
@@ -327,7 +372,7 @@ export function AcompanhamentoProgresso() {
                     cursor={{ fill: '#f8fafc' }}
                     contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
                   />
-                  <Bar dataKey="metasConcluidas" name="Metas" fill="#10b981" radius={[6, 6, 0, 0]} barSize={32} />
+                  <Bar dataKey="metasConcluidas" name={t('progress.charts.metas')} fill="#10b981" radius={[6, 6, 0, 0]} barSize={32} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -339,13 +384,13 @@ export function AcompanhamentoProgresso() {
       <div className="space-y-4">
         <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
           <MessageSquare className="w-6 h-6 text-blue-600" />
-          Histórico de Sessões e Notas
+          {t('progress.sessions.history_title')}
         </h2>
         
         {sessoes.length === 0 ? (
           <Card className="bg-white/60 backdrop-blur-sm border-dashed border-2 border-slate-200">
             <CardContent className="p-12 text-center text-slate-500">
-              Nenhuma sessão registrada para este período.
+              {t('progress.sessions.empty')}
             </CardContent>
           </Card>
         ) : (
@@ -357,7 +402,7 @@ export function AcompanhamentoProgresso() {
                     <div>
                       <CardTitle className="text-lg">{s.titulo}</CardTitle>
                       <p className="text-xs text-slate-400 mt-1">
-                        {s.data instanceof Timestamp ? format(s.data.toDate(), "dd 'de' MMMM 'de' yyyy", { locale: ptBR }) : s.data}
+                        {s.data instanceof Timestamp ? format(s.data.toDate(), t('common.date_format_full'), { locale: i18n.language === 'pt' ? ptBR : i18n.language === 'es' ? es : enUS }) : s.data}
                       </p>
                     </div>
                     <div className="flex gap-1">
@@ -389,7 +434,7 @@ export function AcompanhamentoProgresso() {
                       <span className="text-xs font-bold text-blue-600">{s.progresso}/10</span>
                     </div>
                     <p className="text-sm text-slate-600 line-clamp-3 italic">
-                      {s.notas || 'Sem notas registradas.'}
+                      {s.notas || t('progress.sessions.no_notes')}
                     </p>
 
                     {s.meta_ids && s.meta_ids.length > 0 && (
@@ -422,22 +467,22 @@ export function AcompanhamentoProgresso() {
       <Dialog open={isSessaoDialogOpen} onOpenChange={setIsSessaoDialogOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>{editingSessao ? 'Editar Sessão' : 'Registrar Nova Sessão'}</DialogTitle>
+            <DialogTitle>{editingSessao ? t('progress.sessions.edit_title') : t('progress.sessions.new_title')}</DialogTitle>
             <DialogDescription>
-              Registre os principais pontos e o progresso percebido nesta sessão.
+              {t('progress.sessions.desc')}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label>Título da Sessão</Label>
+              <Label>{t('progress.sessions.form.title')}</Label>
               <Input 
                 value={sessaoForm.titulo} 
                 onChange={e => setSessaoForm({ ...sessaoForm, titulo: e.target.value })} 
-                placeholder="Ex: Sessão 05 - Foco em Carreira"
+                placeholder={t('progress.sessions.form.title_placeholder')}
               />
             </div>
             <div className="space-y-2">
-              <Label>Data</Label>
+              <Label>{t('progress.sessions.form.date')}</Label>
               <Input 
                 type="date" 
                 value={sessaoForm.data} 
@@ -447,9 +492,9 @@ export function AcompanhamentoProgresso() {
 
             {metas.length > 0 && (
               <div className="space-y-2">
-                <Label className="text-xs text-slate-500 font-semibold uppercase tracking-wider">Metas Relacionadas</Label>
+                <Label className="text-xs text-slate-500 font-semibold uppercase tracking-wider">{t('progress.sessions.form.related_goals')}</Label>
                 <div className="grid grid-cols-1 gap-2 border border-slate-100 rounded-lg p-2 max-h-48 overflow-y-auto bg-slate-50/30">
-                  {metas.filter(m => m.status !== 'concluido' || (sessaoForm.meta_ids && sessaoForm.meta_ids.includes(m.id))).map(meta => (
+                  {metas.filter(m => m.status !== MetaStatus.CONCLUIDO || (sessaoForm.meta_ids && sessaoForm.meta_ids.includes(m.id))).map(meta => (
                     <label 
                       key={meta.id} 
                       className={`flex items-center gap-3 p-2 rounded-md border transition-all cursor-pointer ${
@@ -482,7 +527,7 @@ export function AcompanhamentoProgresso() {
                       <div className="flex flex-col">
                         <span className="text-sm font-medium leading-none">{meta.titulo}</span>
                         {meta.prazo && (
-                          <span className="text-[10px] opacity-70 mt-1">Prazo: {new Date(meta.prazo).toLocaleDateString('pt-BR')}</span>
+                          <span className="text-[10px] opacity-70 mt-1">{t('progress.sessions.form.deadline')} {new Date(meta.prazo).toLocaleDateString(i18n.language === 'pt' ? 'pt-BR' : i18n.language === 'es' ? 'es-ES' : 'en-US')}</span>
                         )}
                       </div>
                     </label>
@@ -493,7 +538,7 @@ export function AcompanhamentoProgresso() {
 
             <div className="space-y-2">
               <div className="flex justify-between">
-                <Label>Progresso Percebido (0-10)</Label>
+                <Label>{t('progress.sessions.form.perceived_progress')}</Label>
                 <span className="text-sm font-bold text-blue-600">{sessaoForm.progresso}</span>
               </div>
               <Slider 
@@ -504,19 +549,19 @@ export function AcompanhamentoProgresso() {
               />
             </div>
             <div className="space-y-2">
-              <Label>Notas e Observações</Label>
+              <Label>{t('progress.sessions.form.notes')}</Label>
               <Textarea 
                 value={sessaoForm.notas} 
                 onChange={e => setSessaoForm({ ...sessaoForm, notas: e.target.value })} 
-                placeholder="O que foi discutido? Quais os próximos passos?"
+                placeholder={t('progress.sessions.form.notes_placeholder')}
                 className="min-h-[120px]"
               />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsSessaoDialogOpen(false)}>Cancelar</Button>
+            <Button variant="outline" onClick={() => setIsSessaoDialogOpen(false)}>{t('common.cancel')}</Button>
             <Button onClick={() => mutationSessao.mutate(sessaoForm)} disabled={mutationSessao.isPending}>
-              {mutationSessao.isPending ? 'Salvando...' : 'Salvar Sessão'}
+              {mutationSessao.isPending ? t('common.processing') : t('progress.sessions.form.save_btn')}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -405,6 +405,7 @@
       "properties": {
         "id": { "type": "string" },
         "cliente_id": { "type": "string" },
+        "cliente_uid": { "type": "string" },
         "mentor_id": { "type": "string" },
         "sender_id": { "type": "string" },
         "content": { "type": "string" },
@@ -461,9 +462,27 @@
         "timestamp": { "type": "string", "format": "date-time" }
       },
       "required": ["userId", "plan", "amount", "timestamp"]
+    },
+    "AIInsight": {
+      "title": "Insight da IA",
+      "description": "Insight gerado pelo Gemini sobre o perfil do usuário",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "clienteId": { "type": "string" },
+        "type": { "type": "string", "enum": ["disc", "swot", "roda", "integrated"] },
+        "content": { "type": "object" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "type", "content", "createdAt"]
     }
   },
   "firestore": {
+    "/ai_insights/{insightId}": {
+      "schema": "AIInsight",
+      "description": "Insights gerados pela IA para os usuários/clientes"
+    },
     "/revenue_history/{revenueId}": {
       "schema": "RevenueRecord",
       "description": "Histórico de transações financeiras"

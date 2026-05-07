@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/lib/AuthContext';
 import { db, handleFirestoreError, OperationType } from '@/lib/firebase';
-import { collection, query, where, getDocs, addDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, addDoc, serverTimestamp } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { 
@@ -24,13 +25,14 @@ import { Badge } from '@/components/ui/badge';
 // For now, let's list them and then implement the logic for each.
 
 const TOOLS = [
-  { id: 'roda', name: 'Roda da Vida', icon: TrendingUp, description: 'Avalie o equilíbrio das áreas da sua vida', color: 'text-blue-600', bg: 'bg-blue-50' },
-  { id: 'swot', name: 'Análise SWOT', icon: Target, description: 'Identifique Forças, Fraquezas, Oportunidades e Ameaças', color: 'text-indigo-600', bg: 'bg-indigo-50' },
-  { id: 'disc', name: 'Perfil DISC', icon: Users, description: 'Descubra seu perfil comportamental predominante', color: 'text-teal-600', bg: 'bg-teal-50' },
-  { id: 'valores', name: 'Valores Pessoais', icon: Star, description: 'Identifique seus valores fundamentais', color: 'text-purple-600', bg: 'bg-purple-50' },
+  { id: 'roda', nameKey: 'portal.evaluations.roda.name', icon: TrendingUp, descriptionKey: 'portal.evaluations.roda.description', color: 'text-blue-600', bg: 'bg-blue-50' },
+  { id: 'swot', nameKey: 'portal.evaluations.swot.title', icon: Target, descriptionKey: 'portal.evaluations.swot.description', color: 'text-indigo-600', bg: 'bg-indigo-50' },
+  { id: 'disc', nameKey: 'portal.evaluations.disc.title', icon: Users, descriptionKey: 'portal.evaluations.disc.description', color: 'text-teal-600', bg: 'bg-teal-50' },
+  { id: 'valores', nameKey: 'portal.evaluations.valores.title', icon: Star, descriptionKey: 'portal.evaluations.valores.description', color: 'text-purple-600', bg: 'bg-purple-50' },
 ];
 
 export function PortalEvaluations() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const navigate = useNavigate();
   const [cliente, setCliente] = useState<any>(null);
@@ -70,11 +72,11 @@ export function PortalEvaluations() {
       <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
         <Card className="max-w-md text-center">
           <CardHeader>
-            <CardTitle>Acesso não vinculado</CardTitle>
+            <CardTitle>{t('portal.dashboard.unlinked.title')}</CardTitle>
           </CardHeader>
           <CardContent>
             <Button onClick={() => navigate('/portal/dashboard')} variant="outline" className="w-full">
-              Voltar ao Início
+              {t('portal.evaluations.back')}
             </Button>
           </CardContent>
         </Card>
@@ -91,7 +93,7 @@ export function PortalEvaluations() {
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <span className="font-bold text-xl text-slate-800">
-            {selectedTool ? TOOLS.find(t => t.id === selectedTool)?.name : 'Avaliações'}
+            {selectedTool ? t(TOOLS.find(t => t.id === selectedTool)?.nameKey || '') : t('portal.evaluations.title')}
           </span>
         </div>
       </header>
@@ -100,8 +102,8 @@ export function PortalEvaluations() {
         {!selectedTool ? (
           <div className="space-y-6">
             <div className="mb-8">
-              <h1 className="text-2xl font-bold text-slate-900">Escolha uma ferramenta</h1>
-              <p className="text-slate-500">Selecione a avaliação que deseja realizar agora.</p>
+              <h1 className="text-2xl font-bold text-slate-900">{t('portal.evaluations.choose_tool')}</h1>
+              <p className="text-slate-500">{t('portal.evaluations.choose_tool_desc')}</p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -116,8 +118,8 @@ export function PortalEvaluations() {
                       <tool.icon className="w-6 h-6" />
                     </div>
                     <div className="flex-1">
-                      <h4 className="font-bold text-slate-900">{tool.name}</h4>
-                      <p className="text-xs text-slate-500">{tool.description}</p>
+                      <h4 className="font-bold text-slate-900">{t(tool.nameKey)}</h4>
+                      <p className="text-xs text-slate-500">{t(tool.descriptionKey)}</p>
                     </div>
                     <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-blue-600" />
                   </CardContent>
@@ -127,10 +129,10 @@ export function PortalEvaluations() {
           </div>
         ) : (
           <div className="space-y-6">
-            {selectedTool === 'roda' && <RodaDaVidaForm clienteId={cliente.id} onSuccess={() => setSelectedTool(null)} />}
-            {selectedTool === 'swot' && <SwotForm clienteId={cliente.id} onSuccess={() => setSelectedTool(null)} />}
-            {selectedTool === 'disc' && <DiscForm clienteId={cliente.id} onSuccess={() => setSelectedTool(null)} />}
-            {selectedTool === 'valores' && <ValoresForm clienteId={cliente.id} onSuccess={() => setSelectedTool(null)} />}
+            {selectedTool === 'roda' && <RodaDaVidaForm clienteId={cliente.id} cliente={cliente} onSuccess={() => setSelectedTool(null)} />}
+            {selectedTool === 'swot' && <SwotForm clienteId={cliente.id} cliente={cliente} onSuccess={() => setSelectedTool(null)} />}
+            {selectedTool === 'disc' && <DiscForm clienteId={cliente.id} cliente={cliente} onSuccess={() => setSelectedTool(null)} />}
+            {selectedTool === 'valores' && <ValoresForm clienteId={cliente.id} cliente={cliente} onSuccess={() => setSelectedTool(null)} />}
           </div>
         )}
       </main>
@@ -140,9 +142,10 @@ export function PortalEvaluations() {
 
 // Simplified Form Components for the Portal
 
-function RodaDaVidaForm({ clienteId, onSuccess }: { clienteId: string, onSuccess: () => void }) {
+function RodaDaVidaForm({ clienteId, cliente, onSuccess }: { clienteId: string, cliente: any, onSuccess: () => void }) {
+  const { t } = useTranslation();
   const { user } = useAuth();
-  const [titulo, setTitulo] = useState('Minha Roda da Vida');
+  const [titulo, setTitulo] = useState(t('portal.evaluations.roda.name'));
   const [isSaving, setIsSaving] = useState(false);
   const [valores, setValores] = useState<Record<string, number>>({
     saude_fisica: 5, desenvolvimento_mental: 5, inteligencia_emocional: 5,
@@ -151,17 +154,17 @@ function RodaDaVidaForm({ clienteId, onSuccess }: { clienteId: string, onSuccess
   });
 
   const AREAS = [
-    { id: 'saude_fisica', label: 'Saúde Física' },
-    { id: 'desenvolvimento_mental', label: 'Desenvolvimento Mental' },
-    { id: 'inteligencia_emocional', label: 'Inteligência Emocional' },
-    { id: 'familia', label: 'Família' },
-    { id: 'romance', label: 'Romance' },
-    { id: 'vida_social', label: 'Vida Social' },
-    { id: 'carreira', label: 'Carreira' },
-    { id: 'financas', label: 'Finanças' },
-    { id: 'contribuicao_social', label: 'Contribuição Social' },
-    { id: 'divertimento_lazer', label: 'Diversão/Lazer' },
-    { id: 'saude_ambiente', label: 'Saúde do Ambiente' },
+    { id: 'saude_fisica', label: t('portal.evaluations.roda.areas.saude_fisica') },
+    { id: 'desenvolvimento_mental', label: t('portal.evaluations.roda.areas.desenvolvimento_mental') },
+    { id: 'inteligencia_emocional', label: t('portal.evaluations.roda.areas.inteligencia_emocional') },
+    { id: 'familia', label: t('portal.evaluations.roda.areas.familia') },
+    { id: 'romance', label: t('portal.evaluations.roda.areas.romance') },
+    { id: 'vida_social', label: t('portal.evaluations.roda.areas.vida_social') },
+    { id: 'carreira', label: t('portal.evaluations.roda.areas.carreira') },
+    { id: 'financas', label: t('portal.evaluations.roda.areas.financas') },
+    { id: 'contribuicao_social', label: t('portal.evaluations.roda.areas.contribuicao_social') },
+    { id: 'divertimento_lazer', label: t('portal.evaluations.roda.areas.divertimento_lazer') },
+    { id: 'saude_ambiente', label: t('portal.evaluations.roda.areas.saude_ambiente') },
   ];
 
   const handleSave = async () => {
@@ -172,13 +175,15 @@ function RodaDaVidaForm({ clienteId, onSuccess }: { clienteId: string, onSuccess
         ...valores,
         created_by: user?.uid,
         cliente_id: clienteId,
-        created_date: new Date().toISOString(),
+        cliente_uid: user?.uid,
+        profissional_id: cliente?.profissional_id || null,
+        created_date: serverTimestamp(),
         tipo_avaliacao: 'atual'
       });
-      toast.success('Roda da Vida salva com sucesso!');
+      toast.success(t('portal.evaluations.roda.save_success'));
       onSuccess();
     } catch (error) {
-      toast.error('Erro ao salvar avaliação.');
+      toast.error(t('portal.evaluations.roda.save_error'));
     } finally {
       setIsSaving(false);
     }
@@ -187,8 +192,8 @@ function RodaDaVidaForm({ clienteId, onSuccess }: { clienteId: string, onSuccess
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Avalie seu momento atual</CardTitle>
-        <CardDescription>Dê uma nota de 0 a 10 para cada área da sua vida.</CardDescription>
+        <CardTitle>{t('portal.evaluations.roda.form_title')}</CardTitle>
+        <CardDescription>{t('portal.evaluations.roda.form_desc')}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-8">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -210,14 +215,15 @@ function RodaDaVidaForm({ clienteId, onSuccess }: { clienteId: string, onSuccess
         </div>
         <Button onClick={handleSave} disabled={isSaving} className="w-full bg-blue-600 hover:bg-blue-700">
           {isSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <CheckCircle2 className="w-4 h-4 mr-2" />}
-          Salvar Avaliação
+          {t('portal.evaluations.save_button')}
         </Button>
       </CardContent>
     </Card>
   );
 }
 
-function SwotForm({ clienteId, onSuccess }: { clienteId: string, onSuccess: () => void }) {
+function SwotForm({ clienteId, cliente, onSuccess }: { clienteId: string, cliente: any, onSuccess: () => void }) {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const [isSaving, setIsSaving] = useState(false);
   const [swotData, setSwotData] = useState({
@@ -239,15 +245,17 @@ function SwotForm({ clienteId, onSuccess }: { clienteId: string, onSuccess: () =
         oportunidades: parseItems(swotData.oportunidades),
         ameacas: parseItems(swotData.ameacas),
         cliente_id: clienteId,
+        cliente_uid: user?.uid,
+        profissional_id: cliente?.profissional_id || null,
         created_by: user?.uid,
-        created_at: new Date().toISOString()
+        created_at: serverTimestamp()
       };
 
       await addDoc(collection(db, 'analises_swot'), payload);
-      toast.success('Análise SWOT salva com sucesso!');
+      toast.success(t('portal.evaluations.swot.save_success'));
       onSuccess();
     } catch (error) {
-      toast.error('Erro ao salvar Análise SWOT.');
+      toast.error(t('portal.evaluations.swot.save_error'));
     } finally {
       setIsSaving(false);
     }
@@ -262,9 +270,9 @@ function SwotForm({ clienteId, onSuccess }: { clienteId: string, onSuccess: () =
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-xl">Análise SWOT (Matriz FOFA)</CardTitle>
+        <CardTitle className="text-xl">{t('portal.evaluations.swot.title')}</CardTitle>
         <CardDescription>
-          Preencha os quadrantes abaixo. Separe cada item usando uma <strong>nova linha (Enter)</strong>.
+          {t('portal.evaluations.swot.description')}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -274,12 +282,12 @@ function SwotForm({ clienteId, onSuccess }: { clienteId: string, onSuccess: () =
           <div className="space-y-2 border-t-4 border-emerald-500 bg-emerald-50/50 p-4 rounded-b-xl shadow-sm">
             <h3 className="font-bold text-emerald-800 flex items-center gap-2">
               <TrendingUp className="w-5 h-5" />
-              Forças (Fatores Internos)
+              {t('portal.evaluations.swot.strengths_title')}
             </h3>
-            <p className="text-xs text-emerald-700/80 mb-2">O que você faz bem? Quais são seus talentos, vantagens e diferenciais?</p>
+            <p className="text-xs text-emerald-700/80 mb-2">{t('portal.evaluations.swot.strengths_desc')}</p>
             <textarea 
               rows={4}
-              placeholder="Ex:\nBoa comunicação\nResiliência"
+              placeholder={t('portal.evaluations.swot.strengths_placeholder')}
               className="w-full text-sm p-3 border-emerald-200 rounded-lg focus:ring-emerald-500 focus:border-emerald-500 bg-white"
               value={swotData.forcas}
               onChange={(e) => setSwotData({...swotData, forcas: e.target.value})}
@@ -290,12 +298,12 @@ function SwotForm({ clienteId, onSuccess }: { clienteId: string, onSuccess: () =
           <div className="space-y-2 border-t-4 border-red-500 bg-red-50/50 p-4 rounded-b-xl shadow-sm">
             <h3 className="font-bold text-red-800 flex items-center gap-2">
               <Target className="w-5 h-5" />
-              Fraquezas (Fatores Internos)
+              {t('portal.evaluations.swot.weaknesses_title')}
             </h3>
-            <p className="text-xs text-red-700/80 mb-2">O que precisa melhorar? Quais habilidades ou recursos estão faltando?</p>
+            <p className="text-xs text-red-700/80 mb-2">{t('portal.evaluations.swot.weaknesses_desc')}</p>
             <textarea 
               rows={4}
-              placeholder="Ex:\nFalta de fluência em inglês\nDesorganização com horários"
+              placeholder={t('portal.evaluations.swot.weaknesses_placeholder')}
               className="w-full text-sm p-3 border-red-200 rounded-lg focus:ring-red-500 focus:border-red-500 bg-white"
               value={swotData.fraquezas}
               onChange={(e) => setSwotData({...swotData, fraquezas: e.target.value})}
@@ -306,12 +314,12 @@ function SwotForm({ clienteId, onSuccess }: { clienteId: string, onSuccess: () =
           <div className="space-y-2 border-t-4 border-blue-500 bg-blue-50/50 p-4 rounded-b-xl shadow-sm">
             <h3 className="font-bold text-blue-800 flex items-center gap-2">
               <Star className="w-5 h-5" />
-              Oportunidades (Fatores Externos)
+              {t('portal.evaluations.swot.opportunities_title')}
             </h3>
-            <p className="text-xs text-blue-700/80 mb-2">Quais cenários, tendências ou contatos você pode aproveitar a seu favor?</p>
+            <p className="text-xs text-blue-700/80 mb-2">{t('portal.evaluations.swot.opportunities_desc')}</p>
             <textarea 
               rows={4}
-              placeholder="Ex:\nMercado em expansão\nPossibilidade de promoção"
+              placeholder={t('portal.evaluations.swot.opportunities_placeholder')}
               className="w-full text-sm p-3 border-blue-200 rounded-lg focus:ring-blue-500 focus:border-blue-500 bg-white"
               value={swotData.oportunidades}
               onChange={(e) => setSwotData({...swotData, oportunidades: e.target.value})}
@@ -322,12 +330,12 @@ function SwotForm({ clienteId, onSuccess }: { clienteId: string, onSuccess: () =
           <div className="space-y-2 border-t-4 border-slate-700 bg-slate-50 p-4 rounded-b-xl shadow-sm">
             <h3 className="font-bold text-slate-800 flex items-center gap-2">
               <AlertTriangle className="w-5 h-5" />
-              Ameaças (Fatores Externos)
+              {t('portal.evaluations.swot.threats_title')}
             </h3>
-            <p className="text-xs text-slate-600/80 mb-2">Quais obstáculos, competidores ou mudanças podem prejudicar seu objetivo?</p>
+            <p className="text-xs text-slate-600/80 mb-2">{t('portal.evaluations.swot.threats_desc')}</p>
             <textarea 
               rows={4}
-              placeholder="Ex:\nCrise econômica\nNovos concorrentes no mercado"
+              placeholder={t('portal.evaluations.swot.threats_placeholder')}
               className="w-full text-sm p-3 border-slate-300 rounded-lg focus:ring-slate-500 focus:border-slate-500 bg-white"
               value={swotData.ameacas}
               onChange={(e) => setSwotData({...swotData, ameacas: e.target.value})}
@@ -342,14 +350,15 @@ function SwotForm({ clienteId, onSuccess }: { clienteId: string, onSuccess: () =
           className="w-full bg-indigo-600 hover:bg-indigo-700"
         >
           {isSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <CheckCircle2 className="w-4 h-4 mr-2" />}
-          Salvar Análise SWOT
+          {t('portal.evaluations.save_button')}
         </Button>
       </CardContent>
     </Card>
   );
 }
 
-function DiscForm({ clienteId, onSuccess }: { clienteId: string, onSuccess: () => void }) {
+function DiscForm({ clienteId, cliente, onSuccess }: { clienteId: string, cliente: any, onSuccess: () => void }) {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const [isSaving, setIsSaving] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
@@ -359,91 +368,91 @@ function DiscForm({ clienteId, onSuccess }: { clienteId: string, onSuccess: () =
     {
       id: 1,
       options: [
-        { id: 'D', label: 'Decidido, focado em resultados' },
-        { id: 'I', label: 'Entusiasta, comunicativo' },
-        { id: 'S', label: 'Paciente, bom ouvinte' },
-        { id: 'C', label: 'Analítico, atento a detalhes' }
+        { id: 'D', label: t('portal.evaluations.disc.questions.1.d') },
+        { id: 'I', label: t('portal.evaluations.disc.questions.1.i') },
+        { id: 'S', label: t('portal.evaluations.disc.questions.1.s') },
+        { id: 'C', label: t('portal.evaluations.disc.questions.1.c') }
       ]
     },
     {
       id: 2,
       options: [
-        { id: 'D', label: 'Competitivo, gosta de desafios' },
-        { id: 'I', label: 'Persuasivo, gosta de influenciar' },
-        { id: 'S', label: 'Estável, evita mudanças bruscas' },
-        { id: 'C', label: 'Sistemático, segue regras' }
+        { id: 'D', label: t('portal.evaluations.disc.questions.2.d') },
+        { id: 'I', label: t('portal.evaluations.disc.questions.2.i') },
+        { id: 'S', label: t('portal.evaluations.disc.questions.2.s') },
+        { id: 'C', label: t('portal.evaluations.disc.questions.2.c') }
       ]
     },
     {
       id: 3,
       options: [
-        { id: 'D', label: 'Direto, vai direto ao ponto' },
-        { id: 'I', label: 'Otimista, vê o lado bom' },
-        { id: 'S', label: 'Gentil, prestativo' },
-        { id: 'C', label: 'Preciso, busca a perfeição' }
+        { id: 'D', label: t('portal.evaluations.disc.questions.3.d') },
+        { id: 'I', label: t('portal.evaluations.disc.questions.3.i') },
+        { id: 'S', label: t('portal.evaluations.disc.questions.3.s') },
+        { id: 'C', label: t('portal.evaluations.disc.questions.3.c') }
       ]
     },
     {
       id: 4,
       options: [
-        { id: 'D', label: 'Ousado, assume riscos' },
-        { id: 'I', label: 'Popular, gosta de estar entre pessoas' },
-        { id: 'S', label: 'Leal, valoriza relacionamentos' },
-        { id: 'C', label: 'Lógico, baseia-se em fatos' }
+        { id: 'D', label: t('portal.evaluations.disc.questions.4.d') },
+        { id: 'I', label: t('portal.evaluations.disc.questions.4.i') },
+        { id: 'S', label: t('portal.evaluations.disc.questions.4.s') },
+        { id: 'C', label: t('portal.evaluations.disc.questions.4.c') }
       ]
     },
     {
       id: 5,
       options: [
-        { id: 'D', label: 'Independente, age por conta própria' },
-        { id: 'I', label: 'Animado, contagia os outros' },
-        { id: 'S', label: 'Calmo, mantém o equilíbrio' },
-        { id: 'C', label: 'Cuidadoso, evita erros' }
+        { id: 'D', label: t('portal.evaluations.disc.questions.5.d') },
+        { id: 'I', label: t('portal.evaluations.disc.questions.5.i') },
+        { id: 'S', label: t('portal.evaluations.disc.questions.5.s') },
+        { id: 'C', label: t('portal.evaluations.disc.questions.5.c') }
       ]
     },
     {
       id: 6,
       options: [
-        { id: 'D', label: 'Autoconfiante, acredita no seu potencial' },
-        { id: 'I', label: 'Sociável, faz amigos facilmente' },
-        { id: 'S', label: 'Amigável, acolhedor' },
-        { id: 'C', label: 'Organizado, mantém tudo em ordem' }
+        { id: 'D', label: t('portal.evaluations.disc.questions.6.d') },
+        { id: 'I', label: t('portal.evaluations.disc.questions.6.i') },
+        { id: 'S', label: t('portal.evaluations.disc.questions.6.s') },
+        { id: 'C', label: t('portal.evaluations.disc.questions.6.c') }
       ]
     },
     {
       id: 7,
       options: [
-        { id: 'D', label: 'Forte, não desiste fácil' },
-        { id: 'I', label: 'Expressivo, demonstra emoções' },
-        { id: 'S', label: 'Cooperativo, trabalha bem em equipe' },
-        { id: 'C', label: 'Perfeccionista, foca na qualidade' }
+        { id: 'D', label: t('portal.evaluations.disc.questions.7.d') },
+        { id: 'I', label: t('portal.evaluations.disc.questions.7.i') },
+        { id: 'S', label: t('portal.evaluations.disc.questions.7.s') },
+        { id: 'C', label: t('portal.evaluations.disc.questions.7.c') }
       ]
     },
     {
       id: 8,
       options: [
-        { id: 'D', label: 'Rápido, gosta de agilidade' },
-        { id: 'I', label: 'Charmoso, capta a atenção' },
-        { id: 'S', label: 'Metódico, prefere rotina' },
-        { id: 'C', label: 'Disciplinado, cumpre prazos' }
+        { id: 'D', label: t('portal.evaluations.disc.questions.8.d') },
+        { id: 'I', label: t('portal.evaluations.disc.questions.8.i') },
+        { id: 'S', label: t('portal.evaluations.disc.questions.8.s') },
+        { id: 'C', label: t('portal.evaluations.disc.questions.8.c') }
       ]
     },
     {
       id: 9,
       options: [
-        { id: 'D', label: 'Vigoroso, tem muita energia' },
-        { id: 'I', label: 'Inspirador, motiva os outros' },
-        { id: 'S', label: 'Confiável, cumpre o que promete' },
-        { id: 'C', label: 'Racional, pensa antes de agir' }
+        { id: 'D', label: t('portal.evaluations.disc.questions.9.d') },
+        { id: 'I', label: t('portal.evaluations.disc.questions.9.i') },
+        { id: 'S', label: t('portal.evaluations.disc.questions.9.s') },
+        { id: 'C', label: t('portal.evaluations.disc.questions.9.c') }
       ]
     },
     {
       id: 10,
       options: [
-        { id: 'D', label: 'Questionador, busca o porquê' },
-        { id: 'I', label: 'Descontraído, prefere ambiente leve' },
-        { id: 'S', label: 'Previsível, gosta de segurança' },
-        { id: 'C', label: 'Cauteloso, avalia os riscos' }
+        { id: 'D', label: t('portal.evaluations.disc.questions.10.d') },
+        { id: 'I', label: t('portal.evaluations.disc.questions.10.i') },
+        { id: 'S', label: t('portal.evaluations.disc.questions.10.s') },
+        { id: 'C', label: t('portal.evaluations.disc.questions.10.c') }
       ]
     }
   ];
@@ -488,16 +497,29 @@ function DiscForm({ clienteId, onSuccess }: { clienteId: string, onSuccess: () =
     setIsSaving(true);
     try {
       const results = calculateResults();
+      // Determine dominant profile
+      const scores = {
+        D: results.dominancia,
+        I: results.influencia,
+        S: results.estabilidade,
+        C: results.conformidade
+      };
+      const perfil_dominante = Object.entries(scores).reduce((a, b) => a[1] > b[1] ? a : b)[0];
+
       await addDoc(collection(db, 'perfis_disc'), {
         ...results,
+        titulo: 'Perfil DISC',
+        perfil_dominante,
         cliente_id: clienteId,
+        cliente_uid: user?.uid,
+        profissional_id: cliente?.profissional_id || null,
         created_by: user?.uid,
-        created_at: new Date().toISOString()
+        created_at: serverTimestamp()
       });
-      toast.success('Perfil DISC salvo com sucesso!');
+      toast.success(t('portal.evaluations.disc.save_success'));
       onSuccess();
     } catch (error) {
-      toast.error('Erro ao salvar perfil DISC.');
+      toast.error(t('portal.evaluations.disc.save_error'));
     } finally {
       setIsSaving(false);
     }
@@ -510,7 +532,7 @@ function DiscForm({ clienteId, onSuccess }: { clienteId: string, onSuccess: () =
     <Card>
       <CardHeader>
         <div className="flex justify-between items-center mb-2">
-          <Badge variant="outline">Questão {currentStep + 1} de {DISC_QUESTIONS.length}</Badge>
+          <Badge variant="outline">{t('portal.evaluations.disc.question_count', { current: currentStep + 1, total: DISC_QUESTIONS.length })}</Badge>
           <div className="w-24 h-2 bg-slate-100 rounded-full overflow-hidden">
             <div 
               className="h-full bg-teal-500 transition-all duration-300" 
@@ -518,9 +540,9 @@ function DiscForm({ clienteId, onSuccess }: { clienteId: string, onSuccess: () =
             />
           </div>
         </div>
-        <CardTitle>Perfil Comportamental DISC</CardTitle>
+        <CardTitle>{t('portal.evaluations.disc.title')}</CardTitle>
         <CardDescription>
-          Para cada grupo de comportamentos abaixo, escolha um que <strong>MAIS</strong> se parece com você e um que <strong>MENOS</strong> se parece com você.
+          {t('portal.evaluations.disc.description')}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -538,7 +560,7 @@ function DiscForm({ clienteId, onSuccess }: { clienteId: string, onSuccess: () =
                         : 'bg-white text-slate-400 border border-slate-200 hover:border-teal-300'
                     }`}
                   >
-                    Mais (+)
+                    {t('portal.evaluations.disc.most')}
                   </button>
                   <button
                     onClick={() => handleSelect(option.id, 'least')}
@@ -548,7 +570,7 @@ function DiscForm({ clienteId, onSuccess }: { clienteId: string, onSuccess: () =
                         : 'bg-white text-slate-400 border border-slate-200 hover:border-red-300'
                     }`}
                   >
-                    Menos (-)
+                    {t('portal.evaluations.disc.least')}
                   </button>
                 </div>
               </div>
@@ -563,7 +585,7 @@ function DiscForm({ clienteId, onSuccess }: { clienteId: string, onSuccess: () =
             disabled={currentStep === 0}
             onClick={() => setCurrentStep(prev => prev - 1)}
           >
-            Anterior
+            {t('portal.evaluations.disc.back')}
           </Button>
           {isLastStep ? (
             <Button 
@@ -572,7 +594,7 @@ function DiscForm({ clienteId, onSuccess }: { clienteId: string, onSuccess: () =
               onClick={handleSave}
             >
               {isSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <CheckCircle2 className="w-4 h-4 mr-2" />}
-              Finalizar e Salvar
+              {t('portal.evaluations.disc.finish')}
             </Button>
           ) : (
             <Button 
@@ -580,7 +602,7 @@ function DiscForm({ clienteId, onSuccess }: { clienteId: string, onSuccess: () =
               disabled={!isCurrentStepValid}
               onClick={() => setCurrentStep(prev => prev + 1)}
             >
-              Próxima Questão
+              {t('portal.evaluations.disc.next')}
             </Button>
           )}
         </div>
@@ -589,31 +611,67 @@ function DiscForm({ clienteId, onSuccess }: { clienteId: string, onSuccess: () =
   );
 }
 
-function ValoresForm({ clienteId, onSuccess }: { clienteId: string, onSuccess: () => void }) {
+function ValoresForm({ clienteId, cliente, onSuccess }: { clienteId: string, cliente: any, onSuccess: () => void }) {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const [isSaving, setIsSaving] = useState(false);
   const [selectedValues, setSelectedValues] = useState<string[]>([]);
 
   const VALORES_PREDEFINIDOS = [
-    "Alegria", "Amizade", "Amor", "Autonomia", "Aventura", 
-    "Beleza", "Compaixão", "Competência", "Conhecimento", "Coragem", 
-    "Criatividade", "Crescimento", "Determinação", "Equidade", "Espiritualidade",
-    "Estabilidade", "Excelência", "Família", "Fama", "Fé", 
-    "Generosidade", "Harmonia", "Honestidade", "Humildade", "Independência", 
-    "Inovação", "Integridade", "Justiça", "Lealdade", "Liberdade", 
-    "Liderança", "Paz", "Poder", "Reconhecimento", "Respeito", 
-    "Responsabilidade", "Riqueza", "Sabedoria", "Saúde", "Segurança", 
-    "Sucesso", "Tradição", "Trabalho em Equipe", "Verdade"
-  ].sort((a, b) => a.localeCompare(b));
+    { id: 'joy', key: 'values.list.joy' },
+    { id: 'friendship', key: 'values.list.friendship' },
+    { id: 'love', key: 'values.list.love' },
+    { id: 'autonomy', key: 'values.list.autonomy' },
+    { id: 'adventure', key: 'values.list.adventure' },
+    { id: 'beauty', key: 'values.list.beauty' },
+    { id: 'compassion', key: 'values.list.compassion' },
+    { id: 'competence', key: 'values.list.competence' },
+    { id: 'knowledge', key: 'values.list.knowledge' },
+    { id: 'courage', key: 'values.list.courage' },
+    { id: 'creativity', key: 'values.list.creativity' },
+    { id: 'growth', key: 'values.list.growth' },
+    { id: 'determination', key: 'values.list.determination' },
+    { id: 'equity', key: 'values.list.equity' },
+    { id: 'spirituality', key: 'values.list.spirituality' },
+    { id: 'stability', key: 'values.list.stability' },
+    { id: 'excellence', key: 'values.list.excellence' },
+    { id: 'family', key: 'values.list.family' },
+    { id: 'fame', key: 'values.list.fame' },
+    { id: 'faith', key: 'values.list.faith' },
+    { id: 'generosity', key: 'values.list.generosity' },
+    { id: 'harmony', key: 'values.list.harmony' },
+    { id: 'honesty', key: 'values.list.honesty' },
+    { id: 'humility', key: 'values.list.humility' },
+    { id: 'independence', key: 'values.list.independence' },
+    { id: 'innovation', key: 'values.list.innovation' },
+    { id: 'integrity', key: 'values.list.integrity' },
+    { id: 'justice', key: 'values.list.justice' },
+    { id: 'loyalty', key: 'values.list.loyalty' },
+    { id: 'freedom', key: 'values.list.freedom' },
+    { id: 'leadership', key: 'values.list.leadership' },
+    { id: 'peace', key: 'values.list.peace' },
+    { id: 'power', key: 'values.list.power' },
+    { id: 'recognition', key: 'values.list.recognition' },
+    { id: 'respect', key: 'values.list.respect' },
+    { id: 'responsibility', key: 'values.list.responsibility' },
+    { id: 'wealth', key: 'values.list.wealth' },
+    { id: 'wisdom', key: 'values.list.wisdom' },
+    { id: 'health', key: 'values.list.health' },
+    { id: 'security', key: 'values.list.security' },
+    { id: 'success', key: 'values.list.success' },
+    { id: 'tradition', key: 'values.list.tradition' },
+    { id: 'teamwork', key: 'values.list.teamwork' },
+    { id: 'truth', key: 'values.list.truth' }
+  ].sort((a, b) => t(a.key).localeCompare(t(b.key)));
 
-  const toggleValue = (valor: string) => {
-    if (selectedValues.includes(valor)) {
-      setSelectedValues(prev => prev.filter(v => v !== valor));
+  const toggleValue = (valorId: string) => {
+    if (selectedValues.includes(valorId)) {
+      setSelectedValues(prev => prev.filter(v => v !== valorId));
     } else {
       if (selectedValues.length < 10) {
-        setSelectedValues(prev => [...prev, valor]);
+        setSelectedValues(prev => [...prev, valorId]);
       } else {
-        toast.error("Você já selecionou o limite máximo de 10 valores.");
+        toast.error(t('values.errors.max_reached'));
       }
     }
   };
@@ -622,15 +680,18 @@ function ValoresForm({ clienteId, onSuccess }: { clienteId: string, onSuccess: (
     setIsSaving(true);
     try {
       await addDoc(collection(db, 'valores_pessoais'), {
-        valores: selectedValues,
+        titulo: t('values.title'),
+        valores_selecionados: selectedValues, // Store the IDs
         cliente_id: clienteId,
+        cliente_uid: user?.uid,
+        profissional_id: cliente?.profissional_id || null,
         created_by: user?.uid,
-        created_at: new Date().toISOString()
+        created_at: serverTimestamp()
       });
-      toast.success('Valores Pessoais salvos com sucesso!');
+      toast.success(t('portal.evaluations.valores.save_success'));
       onSuccess();
     } catch (error) {
-      toast.error('Erro ao salvar Valores Pessoais.');
+      toast.error(t('portal.evaluations.valores.save_error'));
     } finally {
       setIsSaving(false);
     }
@@ -644,14 +705,14 @@ function ValoresForm({ clienteId, onSuccess }: { clienteId: string, onSuccess: (
       <CardHeader>
         <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
           <div>
-            <CardTitle className="text-xl">Valores Pessoais</CardTitle>
+            <CardTitle className="text-xl">{t('portal.evaluations.valores.title')}</CardTitle>
             <CardDescription className="mt-1">
-              Os valores guiam suas decisões e comportamentos. Identificar seus valores centrais ajuda a alinhar seus objetivos com o que realmente importa para você.
+              {t('portal.evaluations.valores.description')}
             </CardDescription>
           </div>
           <div className="flex flex-col items-center justify-center p-3 rounded-lg bg-slate-50 border border-slate-200 min-w-[120px]">
             <span className="text-2xl font-bold text-slate-700">{selectedValues.length}</span>
-            <span className="text-xs text-slate-500 uppercase font-medium">Selecionados</span>
+            <span className="text-xs text-slate-500 uppercase font-medium">{t('portal.evaluations.valores.selected')}</span>
           </div>
         </div>
       </CardHeader>
@@ -662,12 +723,12 @@ function ValoresForm({ clienteId, onSuccess }: { clienteId: string, onSuccess: (
           {isFormValid ? (
             <>
               <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-              <span className="text-sm">Ótimo! Você selecionou uma quantidade ideal de valores. Se quiser, pode selecionar mais {10 - selectedValues.length} ou finalizar.</span>
+              <span className="text-sm">{t('portal.evaluations.valores.status_ideal', { count: 10 - selectedValues.length })}</span>
             </>
           ) : (
             <>
               <AlertTriangle className="w-5 h-5 text-blue-600" />
-              <span className="text-sm">Selecione pelo menos <strong>{missingCount}</strong> valores para continuar (Máximo de 10).</span>
+              <span className="text-sm">{t('portal.evaluations.valores.status_missing', { count: missingCount })}</span>
             </>
           )}
         </div>
@@ -675,11 +736,11 @@ function ValoresForm({ clienteId, onSuccess }: { clienteId: string, onSuccess: (
         {/* Values Cloud */}
         <div className="flex flex-wrap gap-2">
           {VALORES_PREDEFINIDOS.map((valor) => {
-            const isSelected = selectedValues.includes(valor);
+            const isSelected = selectedValues.includes(valor.id);
             return (
               <button
-                key={valor}
-                onClick={() => toggleValue(valor)}
+                key={valor.id}
+                onClick={() => toggleValue(valor.id)}
                 className={`
                   px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 border
                   ${isSelected 
@@ -688,7 +749,7 @@ function ValoresForm({ clienteId, onSuccess }: { clienteId: string, onSuccess: (
                   }
                 `}
               >
-                {valor}
+                {t(valor.key)}
               </button>
             );
           })}
@@ -700,7 +761,7 @@ function ValoresForm({ clienteId, onSuccess }: { clienteId: string, onSuccess: (
           className="w-full bg-indigo-600 hover:bg-indigo-700 mt-4"
         >
           {isSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <CheckCircle2 className="w-4 h-4 mr-2" />}
-          Salvar Valores Pessoais
+          {t('portal.evaluations.save_button')}
         </Button>
       </CardContent>
     </Card>

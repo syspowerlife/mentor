@@ -8,8 +8,9 @@ import admin from "firebase-admin";
 import { getFirestore } from "firebase-admin/firestore";
 import fs from "fs";
 import Stripe from "stripe";
-import { MercadoPagoConfig, Preference, Payment } from 'mercadopago';
+import { MercadoPagoConfig, Preference, Payment, PreApproval, PreApprovalPlan } from 'mercadopago';
 import { google } from 'googleapis';
+import { GoogleGenAI } from "@google/genai";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -19,36 +20,52 @@ const firebaseConfigPath = path.join(__dirname, "firebase-applet-config.json");
 const firebaseConfig = JSON.parse(fs.readFileSync(firebaseConfigPath, "utf-8"));
 
 // Initialize Firebase Admin
-let app: admin.app.App;
+let firebaseAdminApp: admin.app.App;
 const serviceAccountKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
 
-if (admin.apps.length === 0) {
-  try {
-    const configProjectId = firebaseConfig.projectId;
-    
-    if (serviceAccountKey) {
+const initializeFirebaseAdmin = () => {
+  // Use existing app if already initialized
+  if (admin.apps.length > 0) {
+    return admin.app();
+  }
+
+  if (serviceAccountKey) {
+    try {
       const serviceAccount = JSON.parse(serviceAccountKey);
-      console.log(`Firebase Admin: Initializing with Service Account [${serviceAccount.client_email}] for project [${serviceAccount.project_id}]`);
-      
-      app = admin.initializeApp({
+      console.log(`Firebase Admin: Initializing with Service Account for project [${serviceAccount.project_id}]`);
+      return admin.initializeApp({
         credential: admin.credential.cert(serviceAccount),
         projectId: serviceAccount.project_id
       });
-    } else {
-      // CRITICAL: We MUST provide the projectId from the config. 
-      // Otherwise, ADC targets the internal project (ais-us-west2-...) where Firestore API is disabled.
-      console.log(`Firebase Admin: Initializing with ADC for project [${configProjectId || 'auto-detect'}].`);
-      app = admin.initializeApp({
-        projectId: configProjectId
-      });
+    } catch (e) {
+      console.error("Invalid FIREBASE_SERVICE_ACCOUNT_KEY JSON:", e);
     }
-  } catch (error) {
-    console.error("Firebase Admin: Initialization error, falling back to basic init:", error);
-    app = admin.initializeApp();
   }
-} else {
-  app = admin.app();
-}
+
+  // Use ADC with the specific project ID from our config.
+  // This is crucial in AI Studio because the auto-detected project (Cloud Run environment)
+  // might differ from the Firebase project created for the app.
+  try {
+    console.log(`Firebase Admin: Initializing with explicit projectId [${firebaseConfig.projectId}]...`);
+    return admin.initializeApp({
+      projectId: firebaseConfig.projectId
+    });
+  } catch (e) {
+    console.warn(`Initialization with explicit projectId failed, trying pure zero-config ADC...`);
+    try {
+      return admin.initializeApp();
+    } catch (e2) {
+      console.error("All Firebase Admin initialization methods failed.");
+      throw e2;
+    }
+  }
+};
+
+firebaseAdminApp = initializeFirebaseAdmin();
+
+// Ensure subsequent admin helper calls use our app
+const authAdmin = admin.auth(firebaseAdminApp);
+const firestoreAdminSnapshot = admin.firestore; // we use the separate getFirestore(firebaseAdminApp) below anyway
 
 // Ensure we use the correct database ID. 
 const databaseId = firebaseConfig.firestoreDatabaseId && firebaseConfig.firestoreDatabaseId !== '(default)' 
@@ -56,11 +73,11 @@ const databaseId = firebaseConfig.firestoreDatabaseId && firebaseConfig.firestor
   : undefined;
 
 // Diagnostics
-const currentProject = app.options.projectId || "auto-detected";
+const currentProject = firebaseAdminApp.options.projectId || "auto-detected";
 console.log(`Firestore target: Project [${currentProject}] Database [${databaseId || '(default)'}]`);
 
 // We use let for db to allow global fallback if named database is broken
-let db = getFirestore(app, databaseId);
+let db = getFirestore(firebaseAdminApp, databaseId);
 
 // --- Health Check System ---
 const systemStatus = {
@@ -71,19 +88,33 @@ const systemStatus = {
   googleOAuth: { enabled: false, message: 'Não configurado' }
 };
 
+// Global flag for DB health
+let isFirestoreHealthy = false;
+
 // Initial connection test with automatic permanent switch to default database if broken
 async function testFirestoreConnection() {
   const targetDbName = databaseId || "(default)";
   try {
     // Identity Debug
     console.log(`[Firebase Diagnostics]`);
-    console.log(`- Project target: ${app.options.projectId}`);
+    console.log(`- Project ID (Config): ${firebaseConfig.projectId}`);
+    console.log(`- Project ID (App): ${firebaseAdminApp.options.projectId || 'auto-detected'}`);
     console.log(`- Database target: ${targetDbName}`);
     console.log(`- Authentication: ${serviceAccountKey ? "Service Account Key detected" : "Using environment Default Credentials (ADC)"}`);
+    console.log(`- GOOGLE_CLOUD_PROJECT env: ${process.env.GOOGLE_CLOUD_PROJECT || 'not set'}`);
+    
+    // Quick Auth sanity check
+    try {
+      await admin.auth(firebaseAdminApp).listUsers(1);
+      console.log(`- Auth Service: Reachable`);
+    } catch (e: any) {
+      console.warn(`- Auth Service: Check failed (${e.message})`);
+    }
 
     const snapshot = await db.collection("users").limit(1).get();
     console.log(`Firestore connection success: Found ${snapshot.size} users.`);
-    systemStatus.firebase = { status: 'ok', message: `Conectado ao projeto ${app.options.projectId}, banco ${targetDbName}` };
+    isFirestoreHealthy = true;
+    systemStatus.firebase = { status: 'ok', message: `Conectado ao projeto ${firebaseAdminApp.options.projectId}, banco ${targetDbName}` };
   } catch (error: any) {
     const isPermissionError = error.code === 7 || error.message?.includes('PERMISSION_DENIED');
     const isNotFoundError = error.code === 5 || error.message?.includes('NOT_FOUND');
@@ -94,22 +125,25 @@ async function testFirestoreConnection() {
     };
 
     if (isPermissionError) {
-      console.error(`[CRITICAL] PERMISSION_DENIED on project ${app.options.projectId}, database ${targetDbName}.`);
+      console.error(`[CRITICAL] PERMISSION_DENIED on project ${firebaseAdminApp.options.projectId}, database ${targetDbName}.`);
       console.error("  -> Possible Cause: Identity mismatch. The server's identity does not have 'Cloud Datastore User' permissions on this project.");
-      console.error("  -> Action Required: Set FIREBASE_SERVICE_ACCOUNT_KEY in your environment or ensure the DB is in the SAME project as the server.");
     }
 
     if (databaseId && (isPermissionError || isNotFoundError)) {
       console.warn(`Attempting EMERGENCY FALLBACK to (default) database...`);
       try {
-        const fallbackDb = getFirestore(app);
+        const fallbackDb = getFirestore(firebaseAdminApp);
         await fallbackDb.collection("users").limit(1).get();
         db = fallbackDb; // PERMANENTLY switch the global db reference
+        isFirestoreHealthy = true;
         console.log(`Fallback SUCCESS: Using (default) database for the rest of the session.`);
         systemStatus.firebase = { status: 'warning', message: 'Usando banco de dados (default) por falha no banco nomeado' };
       } catch (fallbackError: any) {
-        console.error(`TOTAL FAILURE: Access to (default) also denied. (Code: ${fallbackError.code})`);
+        console.error(`TOTAL FAILURE: Access to (default) also denied.`);
+        isFirestoreHealthy = false;
       }
+    } else {
+      isFirestoreHealthy = false;
     }
   }
 }
@@ -157,7 +191,7 @@ const runSafeCron = async (taskName: string, operation: () => Promise<void>) => 
     const isNotFoundError = error.code === 5 || error.message?.includes('NOT_FOUND');
     
     if (isPermissionError) {
-      console.warn(`[Cron: ${taskName}] Access Denied. The server's identity (ADC) lacks permissions on project ${app.options.projectId}.`);
+      console.warn(`[Cron: ${taskName}] Access Denied. The server's identity (ADC) lacks permissions on project ${firebaseAdminApp.options.projectId}.`);
       console.warn(` -> Background tasks like email notifications require a Service Account Key (FIREBASE_SERVICE_ACCOUNT_KEY).`);
     } else if (isNotFoundError) {
       console.warn(`[Cron: ${taskName}] Resource not found (DB ID: ${databaseId || '(default)'}).`);
@@ -175,6 +209,52 @@ const mpClient = process.env.MERCADOPAGO_ACCESS_TOKEN
   ? new MercadoPagoConfig({ accessToken: process.env.MERCADOPAGO_ACCESS_TOKEN }) 
   : null;
 
+/**
+ * Syncs Firestore plans with Mercado Pago PreApproval Plans
+ */
+async function syncMercadoPagoPlans() {
+  if (!mpClient) return;
+
+  const runSync = async () => {
+    console.log('[Mercado Pago] Syncing plans...');
+    const plansSnapshot = await db.collection("planos").where("active", "==", true).get();
+    
+    for (const doc of plansSnapshot.docs) {
+      const planData = doc.data();
+      const planId = doc.id;
+
+      // Only sync if it's a paid plan that doesn't have an MP ID yet
+      if (planData.price > 0 && !planData.mp_plan_id) {
+        try {
+          const mpPlan = new PreApprovalPlan(mpClient);
+          const result = await mpPlan.create({
+            body: {
+              reason: `Assinatura PowerLife - ${planData.name}`,
+              auto_recurring: {
+                frequency: 1,
+                frequency_type: 'months',
+                transaction_amount: Number(planData.price),
+                currency_id: 'BRL'
+              },
+              back_url: `${process.env.APP_URL || 'http://localhost:3000'}/Dashboard`
+            }
+          });
+
+          await db.collection("planos").doc(planId).update({
+            mp_plan_id: result.id
+          });
+          console.log(`Plan synced: ${planData.name} -> MP ID: ${result.id}`);
+        } catch (error: any) {
+          console.error(`Error syncing plan ${planData.name}:`, error.message);
+        }
+      }
+    }
+  };
+
+  await runSafeCron('Sync Mercado Pago Plans', runSync);
+}
+syncMercadoPagoPlans();
+
 // Google OAuth Config
 const googleOAuth2Client = () => new google.auth.OAuth2(
   process.env.GOOGLE_CLIENT_ID,
@@ -182,11 +262,70 @@ const googleOAuth2Client = () => new google.auth.OAuth2(
   `${process.env.APP_URL}/auth/google/callback`
 );
 
+/**
+ * Ensures valid Google tokens are available, refreshing if necessary.
+ */
+async function getValidGoogleTokens(userId: string) {
+  const tokenDoc = await db.collection("users").doc(userId).collection("tokens").doc("google").get();
+  
+  if (!tokenDoc.exists) {
+    throw new Error("Google Calendar not connected");
+  }
+
+  const tokens = tokenDoc.data();
+  const oauth2Client = googleOAuth2Client();
+  oauth2Client.setCredentials(tokens as any);
+
+  // Check if token is expired or expires in the next 5 minutes
+  const expiryDate = tokens?.expiry_date || 0;
+  const isExpired = expiryDate <= (Date.now() + 300000);
+
+  if (isExpired && tokens?.refresh_token) {
+    console.log(`Refreshing Google access token for user ${userId}...`);
+    try {
+      const { credentials } = await oauth2Client.refreshAccessToken();
+      
+      const updatedTokens = {
+        access_token: credentials.access_token,
+        scope: credentials.scope || tokens?.scope,
+        token_type: credentials.token_type || tokens?.token_type,
+        expiry_date: credentials.expiry_date,
+        updated_at: new Date().toISOString()
+      };
+
+      // Only update if we got a new access_token
+      if (credentials.access_token) {
+        await db.collection("users").doc(userId).collection("tokens").doc("google").set(updatedTokens, { merge: true });
+        oauth2Client.setCredentials(credentials);
+        console.log(`Token refreshed successfully for user ${userId}.`);
+      }
+      
+      return oauth2Client;
+    } catch (error: any) {
+      console.error(`Error refreshing Google token for ${userId}:`, error.message);
+      
+      // If refresh token is invalid (revoked), we should probably clear the tokens
+      if (error.message?.includes('invalid_grant')) {
+        console.warn(`Refresh token invalid for user ${userId}. Disconnecting calendar.`);
+        await db.collection("users").doc(userId).collection("tokens").doc("google").delete();
+        throw new Error("Disconnected: Google access revoked");
+      }
+      throw error;
+    }
+  }
+
+  return oauth2Client;
+}
+
 async function startServer() {
   const app = express();
   const PORT = 3000;
 
-  app.use(express.json());
+  app.use(express.json({
+    verify: (req: any, _res, buf) => {
+      req.rawBody = buf;
+    }
+  }));
 
   // Middleware to enforce Admin role and log actions
   const requireAdmin = async (req: any, res: any, next: any) => {
@@ -196,24 +335,50 @@ async function startServer() {
       console.warn(`Unauthorized access attempt to ${req.path} from IP ${req.ip}`);
       return res.status(401).json({ error: "Acesso total negado: Token não fornecido." });
     }
-
     const idToken = authHeader.split('Bearer ')[1];
     try {
-      const decodedToken = await admin.auth().verifyIdToken(idToken);
+      console.log(`[Auth Check] Verifying token for path: ${req.path}`);
+      const decodedToken = await admin.auth(firebaseAdminApp).verifyIdToken(idToken);
       
-      // Consultar Firestore para confirmar papel de admin
-      const userDoc = await db.collection("users").doc(decodedToken.uid).get();
-      const userData = userDoc.data();
+      // Check for master admin early to avoid unnecessary DB hits
+      const isMasterAdminEmail = decodedToken.email === 'sys.powerlife@gmail.com';
       
-      const isSuperAdmin = decodedToken.email === 'sys.powerlife@gmail.com';
-      const isAdminRole = userData?.role === 'admin';
+      // Consultar Firestore para confirmar papel de admin se necessário
+      let userData: any = null;
+      let isAdminInCollection = false;
+      let dbErrorOccurred = false;
+      
+      // Only hit the DB if we are not the master admin or if DB is healthy
+      if (!isMasterAdminEmail && isFirestoreHealthy) {
+        try {
+          const userDoc = await db.collection("users").doc(decodedToken.uid).get();
+          userData = userDoc.data();
+          
+          // Também checar coleção dedicada de admins
+          const adminDoc = await db.collection("admins").doc(decodedToken.uid).get();
+          isAdminInCollection = adminDoc.exists;
+        } catch (dbError: any) {
+          dbErrorOccurred = true;
+          console.warn(`[Auth Check] Firestore access failed for UID ${decodedToken.uid} (falling back to roles/email):`, dbError.message || dbError);
+        }
+      } else if (isMasterAdminEmail && isFirestoreHealthy) {
+        // Even for master admin, we might want their user data for logs, but we can skip if it's failing
+        try {
+          const userDoc = await db.collection("users").doc(decodedToken.uid).get();
+          userData = userDoc.data();
+        } catch (e) {
+          // Ignore error for master admin
+        }
+      }
+      
+      const isAdminRole = isMasterAdminEmail || (userData?.role === 'admin') || isAdminInCollection;
 
-      if (isSuperAdmin || isAdminRole) {
+      if (isAdminRole) {
         req.user = decodedToken;
         
-        // Push to audit logs on success
+        // Push to audit logs on success (if DB is definitely working)
         res.on('finish', async () => {
-          if (res.statusCode >= 200 && res.statusCode < 400) {
+          if (res.statusCode >= 200 && res.statusCode < 400 && isFirestoreHealthy && !dbErrorOccurred) {
             try {
               const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
               await db.collection("admin_audit_logs").add({
@@ -226,8 +391,11 @@ async function startServer() {
                   statusCode: res.statusCode
                 }
               });
-            } catch (auditError) {
-              console.error("Failed to write admin audit log:", auditError);
+            } catch (auditError: any) {
+              // Silent failure for audit logs if it's just a permission thing we can't fix now
+              if (auditError.code !== 7) {
+                console.error("Failed to write admin audit log:", auditError.message || auditError);
+              }
             }
           }
         });
@@ -251,11 +419,20 @@ async function startServer() {
     if (!userId) return;
     try {
       console.log(`Handling subscription interruption for user ${userId}. Reason: ${reason}`);
-      await db.collection("users").doc(userId).update({
+      const updateData = {
         plan: 'free',
         subscriptionStatus: 'inactive',
         updated_at: new Date().toISOString()
-      });
+      };
+
+      await db.collection("users").doc(userId).update(updateData);
+
+      // Update subscription subcollection
+      await db.collection("users").doc(userId).collection("subscription").doc("current").set({
+        ...updateData,
+        last_interruption_reason: reason,
+        timestamp: admin.firestore.FieldValue.serverTimestamp()
+      }, { merge: true });
 
       await db.collection("notifications").add({
         userId,
@@ -393,6 +570,64 @@ async function startServer() {
     }
   });
 
+  // AI Insights Endpoint
+  app.post("/api/ai/insights", async (req, res) => {
+    const { context } = req.body;
+    
+    if (!process.env.GEMINI_API_KEY) {
+      console.warn("GEMINI_API_KEY Missing. AI Insights disabled.");
+      return res.status(503).json({ error: "Serviço de IA não configurado (GEMINI_API_KEY faltando)." });
+    }
+
+    try {
+      const apiKey = process.env.GEMINI_API_KEY;
+      if (!apiKey) {
+        throw new Error('GEMINI_API_KEY is not set');
+      }
+      const ai = new GoogleGenAI({ apiKey });
+
+      const prompt = `
+        Aja como um mentor de alta performance experiente e empático. 
+        Analise o seguinte contexto de um cliente de mentoria e forneça 3 insights práticos, estratégicos e motivadores.
+        
+        Contexto do Cliente:
+        ${JSON.stringify(context)}
+
+        IMPORTANT: Forneça a resposta APENAS em JSON, sem markdown, no seguinte formato:
+        {
+          "insights": [
+            { "title": "Título Curto", "description": "Explicação detalhada da ação", "category": "Mindset|Estratégia|Execução" },
+            { "title": "...", "description": "...", "category": "..." },
+            { "title": "...", "description": "...", "category": "..." }
+          ],
+          "summary": "Um breve resumo encorajador de 2 frases."
+        }
+        
+        Idioma da resposta: Português (Brasil).
+      `;
+
+      const result = await ai.models.generateContent({
+        model: "gemini-1.5-flash",
+        contents: prompt
+      });
+      let text = result.text || "";
+      
+      // Clean potential markdown code blocks if the model ignores the instruction
+      text = text.replace(/```json|```/g, "").trim();
+      
+      try {
+        const parsed = JSON.parse(text);
+        res.json(parsed);
+      } catch (parseError) {
+        console.error("Error parsing AI JSON response:", text);
+        res.status(500).json({ error: "Erro ao processar resposta da IA." });
+      }
+    } catch (error: any) {
+      console.error("AI Insights Error:", error);
+      res.status(500).json({ error: "Falha ao gerar insights de IA." });
+    }
+  });
+
   // Mercado Pago: Create Preference
   app.post("/api/payments/create-preference", async (req, res) => {
     const { plan, userId, email, name, paymentMethod } = req.body;
@@ -473,6 +708,47 @@ async function startServer() {
     }
   });
 
+  // Mercado Pago: Create Subscription
+  app.post("/api/payments/create-subscription", async (req, res) => {
+    const { planId, userId, email, cardToken } = req.body;
+
+    if (!mpClient) {
+      return res.status(500).json({ error: "Mercado Pago not configured" });
+    }
+
+    try {
+      // 1. Get plan details
+      const planDoc = await db.collection("planos").doc(planId).get();
+      if (!planDoc.exists) {
+        return res.status(404).json({ error: "Plano não encontrado" });
+      }
+      const planData = planDoc.data();
+      
+      if (!planData?.mp_plan_id) {
+        return res.status(400).json({ error: "Este plano ainda não está configurado para recorrência." });
+      }
+
+      const preApproval = new PreApproval(mpClient);
+      
+      const result = await preApproval.create({
+        body: {
+          preapproval_plan_id: planData.mp_plan_id,
+          payer_email: email,
+          card_token_id: cardToken, // If using custom card flow
+          back_url: `${process.env.APP_URL || "http://localhost:3000"}/Dashboard?payment=success`,
+          status: 'authorized',
+          external_reference: userId,
+          reason: `Assinatura PowerLife - ${planData.name}`
+        }
+      });
+
+      res.json({ id: result.id, init_point: result.init_point });
+    } catch (error: any) {
+      console.error("Error creating MP subscription:", error);
+      res.status(500).json({ error: error.message || "Falha ao criar assinatura" });
+    }
+  });
+
   // Mercado Pago: Webhook
   app.post("/api/payments/webhook", async (req, res) => {
     try {
@@ -481,13 +757,53 @@ async function startServer() {
       if (!mpClient) return res.status(500).json({ error: "Mercado Pago not configured" });
 
       // Handle Subscription (Preapproval)
-      if (type === 'subscription_preapproval') {
-        const preapprovalId = data?.id;
-        console.log(`Mercado Pago Subscription Update: ${preapprovalId} - ${action}`);
-        // Typically would fetch preapproval status from MP API here
+      if (type === 'subscription_preapproval' || action === 'subscription_preapproval.created' || action === 'subscription_preapproval.updated') {
+        const preapprovalId = data?.id || req.query.id;
+        if (!preapprovalId) return res.status(200).send("OK");
+
+        console.log(`Mercado Pago Subscription Notification: ${preapprovalId}`);
+        
+        try {
+          const preApproval = new PreApproval(mpClient);
+          const subData = await preApproval.get({ id: String(preapprovalId) });
+          
+          const userId = subData.external_reference;
+          const status = subData.status; // authorized, paused, cancelled, pending
+
+          if (userId) {
+            console.log(`Updating subscription for user ${userId} to status: ${status}`);
+            
+            // Map status to our system
+            const isActive = status === 'authorized';
+            const mappedStatus = isActive ? 'active' : (status === 'paused' ? 'paused' : 'inactive');
+
+            await db.collection("users").doc(userId).update({
+              subscriptionId: preapprovalId,
+              subscriptionStatus: mappedStatus,
+              updated_at: new Date().toISOString()
+            });
+
+            if (status === 'authorized') {
+              // Get plan name from preference_id/plan_id if stored, or just use subData info
+              // For now we assume if it's authorized it's active.
+              await db.collection("notifications").add({
+                userId,
+                title: "Assinatura Confirmada",
+                message: "Sua assinatura recorrente foi ativada com sucesso!",
+                type: "success",
+                read: false,
+                createdAt: admin.firestore.FieldValue.serverTimestamp()
+              });
+            } else if (status === 'cancelled') {
+              await handleSubscriptionInterruption(userId, "Assinatura cancelada no Mercado Pago");
+            }
+          }
+        } catch (subErr) {
+          console.error("Error fetching subscription details:", subErr);
+        }
       }
 
-      // Handle Payment notifications
+      // Handle Payment notifications (often triggered by subscriptions too)
       if (type === 'payment' || action === 'payment.created' || action === 'payment.updated') {
         const paymentId = data?.id || req.query.id;
         
@@ -620,13 +936,20 @@ async function startServer() {
     const userId = req.query.userId as string;
     if (!userId) return res.status(400).json({ error: "userId required" });
 
-    const tokenDoc = await db.collection("users").doc(userId).collection("tokens").doc("google").get();
-    const userDoc = await db.collection("users").doc(userId).get();
-    
-    res.json({ 
-      connected: tokenDoc.exists,
-      lastSync: userDoc.data()?.last_calendar_sync || null
-    });
+    try {
+      // Use the utility to ensure we check validity
+      await getValidGoogleTokens(userId).catch(() => null);
+      
+      const tokenDoc = await db.collection("users").doc(userId).collection("tokens").doc("google").get();
+      const userDoc = await db.collection("users").doc(userId).get();
+      
+      res.json({ 
+        connected: tokenDoc.exists,
+        lastSync: userDoc.data()?.last_calendar_sync || null
+      });
+    } catch (error) {
+      res.json({ connected: false, lastSync: null });
+    }
   });
 
   // Google Calendar: Disconnect
@@ -649,15 +972,7 @@ async function startServer() {
     if (!userId) return res.status(400).json({ error: "userId required" });
 
     try {
-      const tokenDoc = await db.collection("users").doc(userId).collection("tokens").doc("google").get();
-      if (!tokenDoc.exists) {
-        return res.status(401).json({ error: "Google Calendar not connected" });
-      }
-
-      const tokens = tokenDoc.data();
-      const oauth2Client = googleOAuth2Client();
-      oauth2Client.setCredentials(tokens as any);
-
+      const oauth2Client = await getValidGoogleTokens(userId);
       const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
 
       // Fetch all agendamentos for this user
@@ -807,11 +1122,22 @@ async function startServer() {
     res.json(systemStatus);
   });
 
+  // Public: Feature Flags (simplified health check)
+  app.get("/api/config/features", (req, res) => {
+    res.json({
+      gemini: !!process.env.GEMINI_API_KEY,
+      resend: !!process.env.RESEND_API_KEY,
+      stripe: !!process.env.STRIPE_SECRET_KEY,
+      mercadopago: !!process.env.MERCADOPAGO_ACCESS_TOKEN,
+      googleCalendar: !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET),
+    });
+  });
+
   // Admin: Reset Password
   app.post("/api/admin/reset-password", async (req, res) => {
     const { email } = req.body;
     try {
-      const link = await admin.auth().generatePasswordResetLink(email);
+      const link = await admin.auth(firebaseAdminApp).generatePasswordResetLink(email);
       if (resend) {
         await resend.emails.send({
           from: "PowerLife <noreply@powerlife.com>",
@@ -831,7 +1157,7 @@ async function startServer() {
     const { userId, habilitado } = req.body;
     try {
       // 1. Update Firebase Auth
-      await admin.auth().updateUser(userId, { disabled: !habilitado });
+      await admin.auth(firebaseAdminApp).updateUser(userId, { disabled: !habilitado });
       
       // 2. Update Firestore
       await db.collection("users").doc(userId).update({
@@ -850,7 +1176,7 @@ async function startServer() {
     const { email, name, password, role } = req.body;
     try {
       // 1. Create in Firebase Auth
-      const userRecord = await admin.auth().createUser({
+      const userRecord = await admin.auth(firebaseAdminApp).createUser({
         email,
         password,
         displayName: name,
@@ -876,7 +1202,7 @@ async function startServer() {
     const { userId } = req.body;
     try {
       // 1. Delete from Firebase Auth
-      await admin.auth().deleteUser(userId);
+      await admin.auth(firebaseAdminApp).deleteUser(userId);
       
       // 2. Delete from Firestore
       await db.collection("users").doc(userId).delete();

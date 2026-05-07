@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, query, where, orderBy, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, or, and, orderBy, onSnapshot } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '@/lib/firebase';
 import { useAuth } from '@/lib/AuthContext';
 
@@ -18,17 +18,33 @@ export function useRodasDaVida(clienteId?: string | null) {
 
     setIsLoading(true);
     const path = 'rodas_da_vida';
+    
+    // Professionals should see evaluations they created OR evaluations where they are the assigned professional
     let q = query(
       collection(db, path),
-      where('created_by', '==', user.uid),
+      or(
+        where('created_by', '==', user.uid),
+        where('profissional_id', '==', user.uid),
+        where('cliente_uid', '==', user.uid),
+        where('cliente_id', '==', user.uid),
+        where('user_id', '==', user.uid)
+      ),
       orderBy('created_date', 'desc')
     );
 
     if (clienteId) {
       q = query(
         collection(db, path),
-        where('created_by', '==', user.uid),
-        where('cliente_id', '==', clienteId),
+        and(
+          or(where('cliente_id', '==', clienteId), where('cliente_uid', '==', clienteId)),
+          or(
+            where('created_by', '==', user.uid),
+            where('profissional_id', '==', user.uid),
+            where('cliente_uid', '==', user.uid),
+            where('cliente_id', '==', user.uid),
+            where('user_id', '==', user.uid)
+          )
+        ),
         orderBy('created_date', 'desc')
       );
     }

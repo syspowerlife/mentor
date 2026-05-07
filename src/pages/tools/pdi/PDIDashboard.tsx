@@ -6,6 +6,7 @@ import {
   addDoc, 
   query, 
   where, 
+  or,
   orderBy, 
   onSnapshot, 
   Timestamp 
@@ -25,6 +26,7 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { formatDateOrTimestamp } from '@/lib/utils';
 import { useLinkedUsers } from '@/hooks/useLinkedUsers';
+import { PDIStatus, PDIAcaoStatus, UserRole, TipoUsuario } from '@/types/enums';
 
 export function PDIDashboard() {
   const { t } = useTranslation();
@@ -43,11 +45,11 @@ export function PDIDashboard() {
     if (!currentUser || !currentUserProfile) return;
 
     const path = 'pdis';
-    const isGestor = currentUserProfile?.role === 'admin' || currentUserProfile?.tipo_usuario === 'Gestor';
+    const isGestor = currentUserProfile?.role === UserRole.ADMIN || currentUserProfile?.tipo_usuario === TipoUsuario.GESTOR;
     
     // Admins can see all, Gestors see where they are gestor_id, Users see where they are usuario_id
     let q;
-    if (currentUserProfile?.role === 'admin') {
+    if (currentUserProfile?.role === UserRole.ADMIN) {
       q = query(collection(db, path), orderBy('created_at', 'desc'));
     } else if (isGestor) {
       q = query(collection(db, path), where('gestor_id', '==', currentUser.uid), orderBy('created_at', 'desc'));
@@ -70,29 +72,73 @@ export function PDIDashboard() {
 
   // Load Acoes and Metas for stats
   useEffect(() => {
-    if (!currentUser) return;
-    const unsubAcoes = onSnapshot(collection(db, 'pdi_acoes'), (snapshot) => {
+    if (!currentUser || !currentUserProfile) return;
+
+    const isGestor = currentUserProfile?.role === UserRole.ADMIN || currentUserProfile?.tipo_usuario === TipoUsuario.GESTOR;
+    
+    let qAcoes;
+    let qMetas;
+
+    if (currentUserProfile?.role === UserRole.ADMIN) {
+      qAcoes = query(collection(db, 'pdi_acoes'));
+      qMetas = query(collection(db, 'pdi_metas'));
+    } else {
+      // For non-admins, we filter by usuario_id OR gestor_id
+      // Note: This requires documents to have these fields. 
+      // Existing docs might not have them, so we'll also try to handle that by filtering by pdi_id if needed,
+      // but for now, let's use the standard owner/participant fields.
+      qAcoes = query(
+        collection(db, 'pdi_acoes'),
+        or(
+          where('usuario_id', '==', currentUser.uid),
+          where('gestor_id', '==', currentUser.uid),
+          where('cliente_uid', '==', currentUser.uid),
+          where('profissional_id', '==', currentUser.uid),
+          where('created_by', '==', currentUser.uid)
+        )
+      );
+      qMetas = query(
+        collection(db, 'pdi_metas'),
+        or(
+          where('usuario_id', '==', currentUser.uid),
+          where('gestor_id', '==', currentUser.uid),
+          where('cliente_uid', '==', currentUser.uid),
+          where('profissional_id', '==', currentUser.uid),
+          where('created_by', '==', currentUser.uid)
+        )
+      );
+    }
+
+    const unsubAcoes = onSnapshot(qAcoes, (snapshot) => {
       setAcoes(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    }, (error) => {
+      console.error("Error loading PDI actions:", error);
     });
-    const unsubMetas = onSnapshot(collection(db, 'pdi_metas'), (snapshot) => {
+
+    const unsubMetas = onSnapshot(qMetas, (snapshot) => {
       setMetas(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    }, (error) => {
+      console.error("Error loading PDI metas:", error);
     });
+
     return () => {
       unsubAcoes();
       unsubMetas();
     };
-  }, [currentUser]);
+  }, [currentUser, currentUserProfile]);
 
   const createPDIMutation = useMutation({
     mutationFn: async (data: any) => {
       const path = 'pdis';
       try {
-        const isGestor = currentUserProfile?.role === 'admin' || currentUserProfile?.tipo_usuario === 'Gestor';
+        const isGestor = currentUserProfile?.role === UserRole.ADMIN || currentUserProfile?.tipo_usuario === TipoUsuario.GESTOR;
         await addDoc(collection(db, path), {
           ...data,
-          status: isGestor ? 'ativo' : 'rascunho',
+          status: isGestor ? PDIStatus.ATIVO : PDIStatus.RASCUNHO,
           gestor_id: isGestor ? currentUser?.uid : (data.gestor_id || ''),
           usuario_id: isGestor ? data.usuario_id : currentUser?.uid,
+          cliente_uid: isGestor ? data.usuario_id : currentUser?.uid,
+          profissional_id: isGestor ? currentUser?.uid : (data.gestor_id || ''),
           created_at: Timestamp.now()
         });
       } catch (error) {
@@ -108,7 +154,7 @@ export function PDIDashboard() {
   });
 
   const handleCreatePDI = () => {
-    const isGestor = currentUserProfile?.role === 'admin' || currentUserProfile?.tipo_usuario === 'Gestor';
+    const isGestor = currentUserProfile?.role === UserRole.ADMIN || currentUserProfile?.tipo_usuario === TipoUsuario.GESTOR;
     if (isGestor && !newPDI.usuario_id) return toast.error(t('pdi.form.errors.select_collaborator'));
     if (!isGestor && !newPDI.gestor_id) return toast.error(t('pdi.form.errors.select_manager'));
     if (!newPDI.data_inicio || !newPDI.data_fim) return toast.error(t('pdi.form.errors.fill_dates'));
@@ -116,12 +162,12 @@ export function PDIDashboard() {
   };
 
   // Calculate some stats
-  const activePDIs = pdis.filter((p: any) => p.status === 'ativo').length;
-  const pendingPDIs = pdis.filter((p: any) => p.status === 'pendente_aprovacao').length;
-  const completedPDIs = pdis.filter((p: any) => p.status === 'concluido').length;
+  const activePDIs = pdis.filter((p: any) => p.status === PDIStatus.ATIVO).length;
+  const pendingPDIs = pdis.filter((p: any) => p.status === PDIStatus.PENDENTE_APROVACAO).length;
+  const completedPDIs = pdis.filter((p: any) => p.status === PDIStatus.CONCLUIDO).length;
 
   const pdiAcoes = acoes.filter((a: any) => metas.some((m: any) => pdis.some((p: any) => p.id === m.pdi_id && m.id === a.meta_id)));
-  const completedAcoes = pdiAcoes.filter((a: any) => a.status === 'concluido').length;
+  const completedAcoes = pdiAcoes.filter((a: any) => a.status === PDIAcaoStatus.CONCLUIDO).length;
   const progressoMedio = calculateProgress(completedAcoes, pdiAcoes.length);
   const acoesAtrasadas = getOverdueItemsCount(pdiAcoes);
 
@@ -149,9 +195,9 @@ export function PDIDashboard() {
           </CardContent>
         </Card>
         <Card 
-          className={`bg-white/60 backdrop-blur-sm shadow-sm ${currentUserProfile?.tipo_usuario === 'Gestor' || currentUserProfile?.role === 'admin' ? 'cursor-pointer hover:bg-orange-50 transition-colors' : ''}`}
+          className={`bg-white/60 backdrop-blur-sm shadow-sm ${currentUserProfile?.tipo_usuario === TipoUsuario.GESTOR || currentUserProfile?.role === UserRole.ADMIN ? 'cursor-pointer hover:bg-orange-50 transition-colors' : ''}`}
           onClick={() => {
-            if (currentUserProfile?.tipo_usuario === 'Gestor' || currentUserProfile?.role === 'admin') {
+            if (currentUserProfile?.tipo_usuario === TipoUsuario.GESTOR || currentUserProfile?.role === UserRole.ADMIN) {
               navigate('/ferramentas/pdi/aprovacao');
             }
           }}
@@ -212,7 +258,7 @@ export function PDIDashboard() {
           ) : (
             <div className="space-y-4">
               {pdis.map((pdi: any) => {
-                const isGestor = currentUserProfile?.role === 'admin' || currentUserProfile?.tipo_usuario === 'Gestor';
+                const isGestor = currentUserProfile?.role === UserRole.ADMIN || currentUserProfile?.tipo_usuario === TipoUsuario.GESTOR;
                 const displayUserId = isGestor ? pdi.usuario_id : pdi.gestor_id;
                 const displayName = getUserName(displayUserId);
                 
@@ -235,13 +281,13 @@ export function PDIDashboard() {
                     </div>
                     <div className="flex items-center gap-4">
                       <Badge variant={
-                        pdi.status === 'ativo' ? 'default' : 
-                        pdi.status === 'concluido' ? 'success' : 
-                        pdi.status === 'pendente_aprovacao' ? 'warning' : 
-                        pdi.status === 'ajuste_solicitado' ? 'destructive' : 
+                        pdi.status === PDIStatus.ATIVO ? 'default' : 
+                        pdi.status === PDIStatus.CONCLUIDO ? 'success' : 
+                        pdi.status === PDIStatus.PENDENTE_APROVACAO ? 'warning' : 
+                        pdi.status === PDIStatus.AJUSTE_SOLICITADO ? 'destructive' : 
                         'secondary'
                       }>
-                        {t(`pdi.status.${pdi.status === 'pendente_aprovacao' ? 'pending_approval' : pdi.status === 'ajuste_solicitado' ? 'adjustment_requested' : pdi.status === 'concluido' ? 'completed' : pdi.status === 'rascunho' ? 'draft' : pdi.status === 'cancelado' ? 'cancelled' : 'active'}`)}
+                        {t(`pdi.status.${pdi.status === PDIStatus.PENDENTE_APROVACAO ? 'pending_approval' : pdi.status === PDIStatus.AJUSTE_SOLICITADO ? 'adjustment_requested' : pdi.status === PDIStatus.CONCLUIDO ? 'completed' : pdi.status === PDIStatus.RASCUNHO ? 'draft' : pdi.status === PDIStatus.CANCELADO ? 'cancelled' : 'active'}`)}
                       </Badge>
                       <ChevronRight className="w-5 h-5 text-slate-400" />
                     </div>
@@ -260,7 +306,7 @@ export function PDIDashboard() {
             <DialogTitle>{t('pdi.form.create_title')}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            {(currentUserProfile?.role === 'admin' || currentUserProfile?.tipo_usuario === 'Gestor') ? (
+            {(currentUserProfile?.role === UserRole.ADMIN || currentUserProfile?.tipo_usuario === TipoUsuario.GESTOR) ? (
               <div className="space-y-2">
                 <Label>{t('pdi.form.collaborator')}</Label>
                 <Select value={newPDI.usuario_id} onValueChange={(v) => setNewPDI({ ...newPDI, usuario_id: v })}>

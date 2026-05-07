@@ -13,58 +13,59 @@ import {
 
 interface ClientActionShortcutsProps {
   clienteId: string;
+  clienteUid?: string;
 }
 
-export function ClientActionShortcuts({ clienteId }: ClientActionShortcutsProps) {
+export function ClientActionShortcuts({ clienteId, clienteUid }: ClientActionShortcutsProps) {
   const navigate = useNavigate();
 
   const shortcuts = [
     {
       title: 'Roda da Vida',
       icon: <Activity className="w-4 h-4" />,
-      path: `/RodaDaVida?clienteId=${clienteId}`,
+      path: `/RodaDaVida?clienteId=${clienteId}${clienteUid ? `&clienteUid=${clienteUid}` : ''}`,
       color: 'text-blue-600',
       bg: 'bg-blue-50'
     },
     {
       title: 'Meta SMART',
       icon: <Target className="w-4 h-4" />,
-      path: `/MetaSmart?clienteId=${clienteId}`,
+      path: `/MetaSmart?clienteId=${clienteId}${clienteUid ? `&clienteUid=${clienteUid}` : ''}`,
       color: 'text-green-600',
       bg: 'bg-green-50'
     },
     {
       title: 'Análise SWOT',
       icon: <ShieldAlert className="w-4 h-4" />,
-      path: `/AnaliseSwot?clienteId=${clienteId}`,
+      path: `/AnaliseSwot?clienteId=${clienteId}${clienteUid ? `&clienteUid=${clienteUid}` : ''}`,
       color: 'text-purple-600',
       bg: 'bg-purple-50'
     },
     {
       title: 'Perfil DISC',
       icon: <UserCircle className="w-4 h-4" />,
-      path: `/PerfilDisc?clienteId=${clienteId}`,
+      path: `/PerfilDisc?clienteId=${clienteId}${clienteUid ? `&clienteUid=${clienteUid}` : ''}`,
       color: 'text-orange-600',
       bg: 'bg-orange-50'
     },
     {
       title: 'Valores Pessoais',
       icon: <Heart className="w-4 h-4" />,
-      path: `/ValoresPessoais?clienteId=${clienteId}`,
+      path: `/ValoresPessoais?clienteId=${clienteId}${clienteUid ? `&clienteUid=${clienteUid}` : ''}`,
       color: 'text-red-600',
       bg: 'bg-red-50'
     },
     {
       title: 'Novo PDI',
       icon: <Target className="w-4 h-4" />,
-      path: `/ferramentas/pdi?clienteId=${clienteId}`,
+      path: `/ferramentas/pdi?clienteId=${clienteId}${clienteUid ? `&clienteUid=${clienteUid}` : ''}`,
       color: 'text-indigo-600',
       bg: 'bg-indigo-50'
     },
     {
       title: 'Agendar Sessão',
       icon: <PlusCircle className="w-4 h-4" />,
-      path: `/Agendamentos?clienteId=${clienteId}`,
+      path: `/Agendamentos?clienteId=${clienteId}${clienteUid ? `&clienteUid=${clienteUid}` : ''}`,
       color: 'text-blue-600',
       bg: 'bg-blue-50'
     }

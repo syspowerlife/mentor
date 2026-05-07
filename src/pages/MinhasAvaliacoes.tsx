@@ -8,7 +8,8 @@ import {
   onSnapshot, 
   deleteDoc, 
   doc,
-  Timestamp
+  Timestamp,
+  or
 } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '@/lib/firebase';
 import { useAuth } from '@/lib/AuthContext';
@@ -43,13 +44,19 @@ export function MinhasAvaliacoes() {
     const setupListener = (colName: string, setter: (data: any[]) => void, filterField = 'created_by') => {
       const q = query(
         collection(db, colName),
-        where(filterField, '==', user.uid),
+        or(
+          where('created_by', '==', user.uid),
+          where('profissional_id', '==', user.uid),
+          where('cliente_uid', '==', user.uid),
+          where('mentor_id', '==', user.uid)
+        ),
         orderBy(colName === 'avaliacoes_sessoes' ? 'data' : (colName === 'rodas_da_vida' ? 'created_date' : 'created_at'), 'desc')
       );
       return onSnapshot(q, (snap) => {
         setter(snap.docs.map(d => ({ id: d.id, ...d.data() })));
       }, (error) => {
         console.error(`Error loading ${colName}:`, error);
+        handleFirestoreError(error, OperationType.LIST, colName);
       });
     };
 

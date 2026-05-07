@@ -9,8 +9,10 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { LogIn, UserPlus, ShieldCheck } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 export function PortalLogin() {
+  const { t } = useTranslation();
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -30,10 +32,10 @@ export function PortalLogin() {
         // Check if user is a client
         const userDoc = await getDoc(doc(db, 'users', user.uid));
         if (userDoc.exists() && userDoc.data().role === 'client') {
-          toast.success('Bem-vindo ao seu Portal!');
+          toast.success(t('portal.login.welcome_success'));
           navigate('/portal/dashboard');
         } else if (userDoc.exists() && (userDoc.data().role === 'user' || userDoc.data().role === 'admin')) {
-          toast.error('Esta conta é de um mentor. Use o login de mentor.');
+          toast.error(t('portal.login.mentor_account_error'));
           await auth.signOut();
         } else {
           // If user exists in Auth but not in users collection with role client, 
@@ -48,15 +50,16 @@ export function PortalLogin() {
               email: user.email,
               name: user.displayName || name,
               role: 'client',
+              plan: 'free',
               created_at: new Date().toISOString()
             });
             await updateDoc(doc(db, 'clientes', clienteDoc.id), {
               user_id: user.uid
             });
-            toast.success('Portal ativado com sucesso!');
+            toast.success(t('portal.login.activated_success'));
             navigate('/portal/dashboard');
           } else {
-            toast.error('Acesso não autorizado. Entre em contato com seu mentor.');
+            toast.error(t('portal.login.unauthorized'));
             await auth.signOut();
           }
         }
@@ -67,7 +70,7 @@ export function PortalLogin() {
         const querySnapshot = await getDocs(q);
         
         if (querySnapshot.empty) {
-          throw new Error('Seu mentor ainda não ativou seu acesso ao portal.');
+          throw new Error(t('portal.login.access_not_enabled'));
         }
 
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
@@ -81,6 +84,7 @@ export function PortalLogin() {
           email,
           name,
           role: 'client',
+          plan: 'free',
           created_at: new Date().toISOString()
         });
 
@@ -89,7 +93,7 @@ export function PortalLogin() {
           user_id: user.uid
         });
 
-        toast.success('Conta criada com sucesso!');
+        toast.success(t('portal.login.signup_success'));
         navigate('/portal/dashboard');
       }
     } catch (error: any) {
@@ -108,21 +112,21 @@ export function PortalLogin() {
               <ShieldCheck className="w-8 h-8 text-blue-600" />
             </div>
           </div>
-          <CardTitle className="text-2xl font-bold">Portal do Mentorado</CardTitle>
+          <CardTitle className="text-2xl font-bold">{t('portal.dashboard.title')}</CardTitle>
           <CardDescription>
             {isLogin 
-              ? 'Acesse seu progresso e acompanhe suas metas' 
-              : 'Crie sua conta para acessar o portal'}
+              ? t('portal.login.login_desc') 
+              : t('portal.login.signup_desc')}
           </CardDescription>
         </CardHeader>
         <form onSubmit={handleAuth}>
           <CardContent className="space-y-4">
             {!isLogin && (
               <div className="space-y-2">
-                <Label htmlFor="name">Nome Completo</Label>
+                <Label htmlFor="name">{t('portal.login.full_name')}</Label>
                 <Input 
                   id="name" 
-                  placeholder="Seu nome" 
+                  placeholder={t('portal.login.name_placeholder')} 
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   required 
@@ -130,18 +134,18 @@ export function PortalLogin() {
               </div>
             )}
             <div className="space-y-2">
-              <Label htmlFor="email">E-mail</Label>
+              <Label htmlFor="email">{t('portal.login.email')}</Label>
               <Input 
                 id="email" 
                 type="email" 
-                placeholder="seu@email.com" 
+                placeholder={t('portal.login.email_placeholder')} 
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required 
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Senha</Label>
+              <Label htmlFor="password">{t('portal.login.password')}</Label>
               <Input 
                 id="password" 
                 type="password" 
@@ -154,11 +158,11 @@ export function PortalLogin() {
           <CardFooter className="flex flex-col space-y-4">
             <Button className="w-full bg-blue-600 hover:bg-blue-700" type="submit" disabled={isLoading}>
               {isLoading ? (
-                'Processando...'
+                t('common.processing')
               ) : (
                 <>
                   {isLogin ? <LogIn className="w-4 h-4 mr-2" /> : <UserPlus className="w-4 h-4 mr-2" />}
-                  {isLogin ? 'Entrar no Portal' : 'Criar Conta'}
+                  {isLogin ? t('portal.login.login_btn') : t('portal.login.signup_btn')}
                 </>
               )}
             </Button>
@@ -168,7 +172,7 @@ export function PortalLogin() {
               type="button"
               onClick={() => setIsLogin(!isLogin)}
             >
-              {isLogin ? 'Não tem conta? Cadastre-se' : 'Já tem conta? Entre aqui'}
+              {isLogin ? t('portal.login.no_account') : t('portal.login.has_account')}
             </Button>
           </CardFooter>
         </form>

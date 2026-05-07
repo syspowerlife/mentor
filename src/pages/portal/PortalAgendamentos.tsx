@@ -14,14 +14,18 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { ptBR, enUS, es } from 'date-fns/locale';
 import { Badge } from '@/components/ui/badge';
+import { useTranslation } from 'react-i18next';
 
 export function PortalAgendamentos() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { t, i18n } = useTranslation();
   const [agendamentos, setAgendamentos] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  const dateLocale = i18n.language === 'pt' ? ptBR : i18n.language === 'es' ? es : enUS;
 
   useEffect(() => {
     if (!user) return;
@@ -41,6 +45,7 @@ export function PortalAgendamentos() {
         const qAgendamentos = query(
           collection(db, 'agendamentos'),
           where('cliente_id', '==', clienteId),
+          where('cliente_uid', '==', user.uid),
           orderBy('data_inicio', 'desc')
         );
         const snapshot = await getDocs(qAgendamentos);
@@ -73,7 +78,7 @@ export function PortalAgendamentos() {
           <Button variant="ghost" size="icon" onClick={() => navigate('/portal/dashboard')}>
             <ArrowLeft className="w-5 h-5" />
           </Button>
-          <span className="font-bold text-xl text-slate-800">Seus Agendamentos</span>
+          <span className="font-bold text-xl text-slate-800">{t('portal.sessions.title')}</span>
         </div>
       </header>
 
@@ -82,18 +87,18 @@ export function PortalAgendamentos() {
         <section className="space-y-4">
           <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
             <Calendar className="w-5 h-5 text-blue-600" />
-            Próximas Sessões
+            {t('portal.sessions.next_sessions')}
           </h2>
           {proximas.length === 0 ? (
             <Card className="bg-white/50 border-dashed">
               <CardContent className="p-8 text-center text-slate-500">
-                Nenhuma sessão agendada para o futuro.
+                {t('portal.sessions.no_sessions_future')}
               </CardContent>
             </Card>
           ) : (
             <div className="grid gap-4">
               {proximas.map((agendamento) => (
-                <AgendamentoCard key={agendamento.id} agendamento={agendamento} isFuture />
+                <AgendamentoCard key={agendamento.id} agendamento={agendamento} isFuture dateLocale={dateLocale} />
               ))}
             </div>
           )}
@@ -103,14 +108,14 @@ export function PortalAgendamentos() {
         <section className="space-y-4">
           <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
             <Clock className="w-5 h-5 text-slate-500" />
-            Histórico de Sessões
+            {t('portal.sessions.history')}
           </h2>
           {passadas.length === 0 ? (
-            <p className="text-center py-8 text-slate-400 italic">Nenhum histórico de sessões.</p>
+            <p className="text-center py-8 text-slate-400 italic">{t('portal.sessions.no_sessions_history')}</p>
           ) : (
             <div className="grid gap-4">
               {passadas.map((agendamento) => (
-                <AgendamentoCard key={agendamento.id} agendamento={agendamento} />
+                <AgendamentoCard key={agendamento.id} agendamento={agendamento} dateLocale={dateLocale} />
               ))}
             </div>
           )}
@@ -120,8 +125,9 @@ export function PortalAgendamentos() {
   );
 }
 
-function AgendamentoCard({ agendamento, isFuture }: { agendamento: any, isFuture?: boolean }) {
+function AgendamentoCard({ agendamento, isFuture, dateLocale }: { agendamento: any, isFuture?: boolean, dateLocale: any }) {
   const data = new Date(agendamento.data_inicio);
+  const { t } = useTranslation();
   
   return (
     <Card className={`${isFuture ? 'border-blue-200 bg-blue-50/30' : 'bg-white'}`}>
@@ -134,9 +140,9 @@ function AgendamentoCard({ agendamento, isFuture }: { agendamento: any, isFuture
             <div>
               <div className="flex items-center gap-2 mb-1">
                 <span className="font-bold text-slate-900">
-                  {format(data, "EEEE, dd 'de' MMMM", { locale: ptBR })}
+                  {format(data, t('common.date_format_long'), { locale: dateLocale })}
                 </span>
-                {isFuture && <Badge className="bg-blue-600">Confirmado</Badge>}
+                {isFuture && <Badge className="bg-blue-600">{t('portal.sessions.confirmed')}</Badge>}
               </div>
               <p className="text-sm text-slate-600 font-medium">{agendamento.titulo}</p>
               <div className="flex flex-wrap gap-4 mt-3 text-xs text-slate-500">
@@ -158,7 +164,7 @@ function AgendamentoCard({ agendamento, isFuture }: { agendamento: any, isFuture
                     className="flex items-center gap-1 text-blue-600 hover:underline"
                   >
                     <Video className="w-3.5 h-3.5" />
-                    Link da Reunião
+                    {t('portal.sessions.meeting_link')}
                   </a>
                 )}
               </div>
@@ -166,7 +172,7 @@ function AgendamentoCard({ agendamento, isFuture }: { agendamento: any, isFuture
           </div>
           {isFuture && agendamento.link_reuniao && (
             <Button className="bg-blue-600 hover:bg-blue-700" onClick={() => window.open(agendamento.link_reuniao, '_blank')}>
-              Entrar na Sessão
+              {t('portal.sessions.join_session')}
             </Button>
           )}
         </div>

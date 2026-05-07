@@ -13,13 +13,14 @@ import { cn } from '@/lib/utils';
 import { markNotificationAsRead, markAllNotificationsAsRead } from '@/lib/notifications';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'motion/react';
+import { NotificationType } from '@/types/enums';
 
 interface Notification {
   id: string;
   userId: string;
   title: string;
   message: string;
-  type: 'info' | 'success' | 'warning' | 'error';
+  type: NotificationType;
   read: boolean;
   link?: string;
   createdAt: any;
@@ -29,7 +30,7 @@ export function NotificationsHistory() {
   const { user } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<'all' | 'unread' | 'info' | 'success' | 'warning' | 'error'>('all');
+  const [filter, setFilter] = useState<'all' | 'unread' | NotificationType>('all');
 
   useEffect(() => {
     if (!user) return;
@@ -84,10 +85,10 @@ export function NotificationsHistory() {
 
   const getIcon = (type: Notification['type']) => {
     switch (type) {
-      case 'info': return <Info className="w-5 h-5 text-blue-500" />;
-      case 'warning': return <AlertTriangle className="w-5 h-5 text-amber-500" />;
-      case 'success': return <CheckCircle2 className="w-5 h-5 text-green-500" />;
-      case 'error': return <AlertTriangle className="w-5 h-5 text-red-500" />;
+      case NotificationType.INFO: return <Info className="w-5 h-5 text-blue-500" />;
+      case NotificationType.WARNING: return <AlertTriangle className="w-5 h-5 text-amber-500" />;
+      case NotificationType.SUCCESS: return <CheckCircle2 className="w-5 h-5 text-green-500" />;
+      case NotificationType.ERROR: return <AlertTriangle className="w-5 h-5 text-red-500" />;
       default: return <Bell className="w-5 h-5 text-slate-500" />;
     }
   };
@@ -124,9 +125,9 @@ export function NotificationsHistory() {
               <TabsList className="bg-slate-200/50">
                 <TabsTrigger value="all" className="text-xs">Todas</TabsTrigger>
                 <TabsTrigger value="unread" className="text-xs">Não lidas</TabsTrigger>
-                <TabsTrigger value="info" className="text-xs">Info</TabsTrigger>
-                <TabsTrigger value="success" className="text-xs">Sucesso</TabsTrigger>
-                <TabsTrigger value="warning" className="text-xs">Alertas</TabsTrigger>
+                <TabsTrigger value={NotificationType.INFO} className="text-xs">Info</TabsTrigger>
+                <TabsTrigger value={NotificationType.SUCCESS} className="text-xs">Sucesso</TabsTrigger>
+                <TabsTrigger value={NotificationType.WARNING} className="text-xs">Alertas</TabsTrigger>
               </TabsList>
             </Tabs>
             
@@ -175,10 +176,10 @@ export function NotificationsHistory() {
                   >
                     <div className={cn(
                       "mt-1 p-2 rounded-lg",
-                      n.type === 'info' && "bg-blue-100/50",
-                      n.type === 'success' && "bg-green-100/50",
-                      n.type === 'warning' && "bg-amber-100/50",
-                      n.type === 'error' && "bg-red-100/50"
+                      n.type === NotificationType.INFO && "bg-blue-100/50",
+                      n.type === NotificationType.SUCCESS && "bg-green-100/50",
+                      n.type === NotificationType.WARNING && "bg-amber-100/50",
+                      n.type === NotificationType.ERROR && "bg-red-100/50"
                     )}>
                       {getIcon(n.type)}
                     </div>

@@ -1,12 +1,17 @@
-# Especificação de Pendências de Implementação - PowerLife
-**Data e Hora de Geração:** 2026-04-23 14:10:04 UTC
+# Spec de Implementação - O que falta
+Data e Hora de Geração: 2026-05-05 11:02 (Brasília)
 
-Esta especificação foi dividida em tarefas menores (issues) localizadas em `/analytics/issues/` para melhor acompanhamento:
+## 1. Páginas (Pages)
+- **ClientDossier.tsx**: Página para visualização consolidada de todos os dados de um cliente específico.
+- **SuccessPayment.tsx / FailurePayment.tsx**: Páginas de retorno do Mercado Pago.
+- **AdminMétricas.tsx**: Dashboard administrativo com gráficos de crescimento e uso.
 
-1. [Gerenciamento Dinâmico de Administradores](./issues/01-dynamic-admins.md)
-2. [Interface de Gestão de Funções (Roles)](./issues/02-role-management-ui.md)
-3. [Middleware de Raw Body para Stripe](./issues/03-stripe-raw-body.md)
-4. [Verificação de Saúde de Configurações (Health Check)](./issues/04-config-health-check.md)
-5. [Normalização Global de Enums](./issues/05-enum-normalization.md)
-6. [Otimização de Regras de Segurança (Performance)](./issues/06-security-rules-optimization.md)
-7. [Fallback de UI para Recursos Indisponíveis](./issues/07-ui-fallbacks.md)
+## 2. Comportamentos (Behaviors)
+- **Persistência de IA**: Salvar os insights do Gemini no Firestore (`ai_insights`) vinculando ao ID do cliente/processo.
+- **Webhook Mercado Pago**: Endpoint no `server.ts` para capturar atualizações de pagamento e atualizar o status do plano no Firestore.
+- **Filtro de Planos**: Middleware ou hook de proteção que bloqueia acesso a rotas premium se o status for `free`.
+
+## 3. Componentes (Components)
+- **DossierSummary**: Resumo visual (cards/graficos) consolidando DISC, SWOT e Roda da Vida.
+- **PaymentGate**: Overlay/Modal que aparece quando o usuário tenta usar uma funcionalidade não inclusa no plano dele.
+- **EmailTemplateBuilder**: Sistema (backend/service) para gerar corpos de email dinâmicos.

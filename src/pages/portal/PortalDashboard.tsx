@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/lib/AuthContext';
 import { db, handleFirestoreError, OperationType } from '@/lib/firebase';
-import { collection, query, where, getDocs, orderBy, onSnapshot, limit } from 'firebase/firestore';
+import { collection, query, where, getDocs, onSnapshot } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -16,119 +17,59 @@ import {
   User,
   LogOut,
   ChevronRight,
-  Mail,
-  Send
+  Mail
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { auth } from '@/lib/firebase';
 import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { Textarea } from '@/components/ui/textarea';
-import { toast } from 'sonner';
-import { addDoc, Timestamp } from 'firebase/firestore';
+import { ptBR, enUS, es } from 'date-fns/locale';
+import { MetaStatus } from '@/types/enums';
+import { useMetas } from '@/hooks/useMetas';
+import { useAgendamentos } from '@/hooks/useAgendamentos';
+import { useMensagens } from '@/hooks/useMensagens';
+
+const dateLocales: Record<string, any> = {
+  pt: ptBR,
+  en: enUS,
+  es: es
+};
 
 export function PortalDashboard() {
+  const { t, i18n } = useTranslation();
   const { user, userData } = useAuth();
   const navigate = useNavigate();
   const [cliente, setCliente] = useState<any>(null);
-  const [metas, setMetas] = useState<any[]>([]);
-  const [agendamentos, setAgendamentos] = useState<any[]>([]);
-  const [mensagens, setMensagens] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isClientLoading, setIsClientLoading] = useState(true);
 
-  // Messaging State
-  const [isMessageOpen, setIsMessageOpen] = useState(false);
-  const [newMessage, setNewMessage] = useState('');
-  const [isSendingMessage, setIsSendingMessage] = useState(false);
+  const currentLocale = dateLocales[i18n.language.split('-')[0]] || ptBR;
 
+  // 1. Find the linked client document
   useEffect(() => {
     if (!user) return;
 
-    const unsubscribes: (() => void)[] = [];
-
-    const fetchClientData = async () => {
-      try {
-        // 1. Find the linked client document
-        const q = query(collection(db, 'clientes'), where('user_id', '==', user.uid));
-        const querySnapshot = await getDocs(q);
-        
-        if (querySnapshot.empty) {
-          setIsLoading(false);
-          return;
-        }
-
-        const clienteDoc = querySnapshot.docs[0];
-        const clienteData = { id: clienteDoc.id, ...clienteDoc.data() };
-        setCliente(clienteData);
-
-        // 2. Set up real-time listeners
-        const metasQuery = query(
-          collection(db, 'metas_smart'),
-          where('cliente_id', '==', clienteDoc.id),
-          orderBy('created_date', 'desc')
-        );
-        
-        unsubscribes.push(onSnapshot(metasQuery, (snapshot) => {
-          setMetas(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-        }));
-
-        const agendamentosQuery = query(
-          collection(db, 'agendamentos'),
-          where('cliente_id', '==', clienteDoc.id),
-          orderBy('data_inicio', 'asc'),
-          limit(5)
-        );
-
-        unsubscribes.push(onSnapshot(agendamentosQuery, (snapshot) => {
-          setAgendamentos(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-        }));
-
-        const mensagensQuery = query(
-          collection(db, 'mensagens'),
-          where('cliente_id', '==', clienteDoc.id),
-          orderBy('created_at', 'asc')
-        );
-
-        unsubscribes.push(onSnapshot(mensagensQuery, (snapshot) => {
-          setMensagens(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-        }));
-
-        setIsLoading(false);
-      } catch (error) {
-        handleFirestoreError(error, OperationType.GET, 'portal_dashboard');
-        setIsLoading(false);
+    const q = query(collection(db, 'clientes'), where('user_id', '==', user.uid));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      if (!snapshot.empty) {
+        const doc = snapshot.docs[0];
+        setCliente({ id: doc.id, ...doc.data() });
+      } else {
+        setCliente(null);
       }
-    };
+      setIsClientLoading(false);
+    }, (error) => {
+      handleFirestoreError(error, OperationType.GET, 'clientes');
+      setIsClientLoading(false);
+    });
 
-    fetchClientData();
-
-    return () => {
-      unsubscribes.forEach(unsub => unsub());
-    };
+    return () => unsubscribe();
   }, [user]);
 
-  const handleSendMessage = async () => {
-    if (!cliente || !user || !newMessage.trim()) return;
-    setIsSendingMessage(true);
-    try {
-      await addDoc(collection(db, 'mensagens'), {
-        cliente_id: cliente.id,
-        mentor_id: cliente.profissional_id,
-        sender_id: user.uid,
-        content: newMessage.trim(),
-        created_at: Timestamp.now(),
-        read: false
-      });
-      setNewMessage('');
-      toast.success('Mensagem enviada ao seu mentor!');
-      setIsMessageOpen(false);
-    } catch (error: any) {
-      toast.error(error.message || 'Erro ao enviar mensagem.');
-    } finally {
-      setIsSendingMessage(false);
-    }
-  };
+  // 2. Use hooks for data linked to the client
+  const { metas, isLoading: isLoadingMetas } = useMetas(cliente?.id);
+  const { agendamentos, isLoading: isLoadingAgendamentos } = useAgendamentos(cliente?.id);
+  const { mensagens, isLoading: isLoadingMensagens } = useMensagens(cliente?.id);
+
+  const isLoading = isClientLoading || isLoadingMetas || isLoadingAgendamentos || isLoadingMensagens;
 
   const handleLogout = async () => {
     await auth.signOut();
@@ -148,14 +89,14 @@ export function PortalDashboard() {
       <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
         <Card className="max-w-md text-center">
           <CardHeader>
-            <CardTitle>Acesso não vinculado</CardTitle>
+            <CardTitle>{t('portal.dashboard.unlinked.title')}</CardTitle>
             <CardDescription>
-              Não encontramos um perfil de mentorado vinculado a este e-mail.
+              {t('portal.dashboard.unlinked.description')}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Button onClick={handleLogout} variant="outline" className="w-full">
-              Sair e tentar outro e-mail
+              {t('portal.dashboard.unlinked.logout')}
             </Button>
           </CardContent>
         </Card>
@@ -163,7 +104,7 @@ export function PortalDashboard() {
     );
   }
 
-  const metasConcluidas = metas.filter(m => m.status === 'concluido').length;
+  const metasConcluidas = metas.filter(m => m.status === MetaStatus.CONCLUIDO).length;
   const progressoMetas = metas.length > 0 ? (metasConcluidas / metas.length) * 100 : 0;
 
   return (
@@ -180,9 +121,9 @@ export function PortalDashboard() {
           <div className="flex items-center gap-4">
             <div className="hidden md:block text-right">
               <p className="text-sm font-medium text-slate-900">{userData?.name || user?.displayName}</p>
-              <p className="text-xs text-slate-500">Mentorado</p>
+              <p className="text-xs text-slate-500">{t('portal.dashboard.mentee')}</p>
             </div>
-            <Button variant="ghost" size="icon" onClick={handleLogout} title="Sair">
+            <Button variant="ghost" size="icon" onClick={handleLogout} title={t('common.logout') || 'Sair'}>
               <LogOut className="w-5 h-5 text-slate-500" />
             </Button>
           </div>
@@ -192,9 +133,9 @@ export function PortalDashboard() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 space-y-8">
         {/* Welcome Section */}
         <div className="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-2xl p-8 text-white shadow-lg">
-          <h1 className="text-3xl font-bold mb-2">Olá, {cliente.nome}! 👋</h1>
+          <h1 className="text-3xl font-bold mb-2">{t('portal.dashboard.welcome', { name: cliente.nome })}</h1>
           <p className="text-blue-100 max-w-2xl">
-            Bem-vindo ao seu portal de mentoria. Aqui você pode acompanhar seu progresso, visualizar suas metas e gerenciar seus agendamentos.
+            {t('portal.dashboard.welcome_desc')}
           </p>
         </div>
 
@@ -207,18 +148,18 @@ export function PortalDashboard() {
                 <div>
                   <CardTitle className="flex items-center gap-2">
                     <Target className="w-5 h-5 text-blue-600" />
-                    Suas Metas SMART
+                    {t('portal.dashboard.smart_goals.title')}
                   </CardTitle>
-                  <CardDescription>Acompanhe o que você definiu com seu mentor</CardDescription>
+                  <CardDescription>{t('portal.dashboard.smart_goals.description')}</CardDescription>
                 </div>
                 <Badge variant="secondary" className="bg-blue-50 text-blue-700">
-                  {metasConcluidas}/{metas.length} Concluídas
+                  {metasConcluidas}/{metas.length} {t('portal.dashboard.smart_goals.completed')}
                 </Badge>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm font-medium">
-                    <span>Progresso Geral</span>
+                    <span>{t('portal.dashboard.smart_goals.general_progress')}</span>
                     <span>{Math.round(progressoMetas)}%</span>
                   </div>
                   <Progress value={progressoMetas} className="h-2" />
@@ -226,15 +167,15 @@ export function PortalDashboard() {
 
                 <div className="space-y-4">
                   {metas.length === 0 ? (
-                    <p className="text-center py-8 text-slate-500 italic">Nenhuma meta cadastrada ainda.</p>
+                    <p className="text-center py-8 text-slate-500 italic">{t('portal.dashboard.smart_goals.no_metas')}</p>
                   ) : (
                     metas.map((meta) => (
                       <div key={meta.id} className="flex items-start gap-4 p-4 rounded-xl border bg-white hover:border-blue-200 transition-colors">
                         <div className={`mt-1 p-2 rounded-full ${
-                          meta.status === 'concluido' ? 'bg-green-100 text-green-600' : 
-                          meta.status === 'em_andamento' ? 'bg-blue-100 text-blue-600' : 'bg-slate-100 text-slate-600'
+                          meta.status === MetaStatus.CONCLUIDO ? 'bg-green-100 text-green-600' : 
+                          meta.status === MetaStatus.EM_ANDAMENTO ? 'bg-blue-100 text-blue-600' : 'bg-slate-100 text-slate-600'
                         }`}>
-                          {meta.status === 'concluido' ? <CheckCircle2 className="w-4 h-4" /> : <Clock className="w-4 h-4" />}
+                          {meta.status === MetaStatus.CONCLUIDO ? <CheckCircle2 className="w-4 h-4" /> : <Clock className="w-4 h-4" />}
                         </div>
                         <div className="flex-1">
                           <h4 className="font-semibold text-slate-900">{meta.titulo}</h4>
@@ -269,8 +210,8 @@ export function PortalDashboard() {
                     <FileText className="w-6 h-6" />
                   </div>
                   <div>
-                    <h4 className="font-bold text-slate-900">Avaliações</h4>
-                    <p className="text-sm text-slate-500">Responda seus formulários</p>
+                    <h4 className="font-bold text-slate-900">{t('portal.dashboard.evaluations.title')}</h4>
+                    <p className="text-sm text-slate-500">{t('portal.dashboard.evaluations.description')}</p>
                   </div>
                   <ChevronRight className="w-5 h-5 ml-auto text-slate-300 group-hover:text-blue-600" />
                 </CardContent>
@@ -284,8 +225,28 @@ export function PortalDashboard() {
                     <TrendingUp className="w-6 h-6" />
                   </div>
                   <div>
-                    <h4 className="font-bold text-slate-900">Evolução</h4>
-                    <p className="text-sm text-slate-500">Veja seus gráficos DISC e SWOT</p>
+                    <h4 className="font-bold text-slate-900">{t('portal.dashboard.evolution.title')}</h4>
+                    <p className="text-sm text-slate-500">{t('portal.dashboard.evolution.description')}</p>
+                  </div>
+                  <ChevronRight className="w-5 h-5 ml-auto text-slate-300 group-hover:text-blue-600" />
+                </CardContent>
+              </Card>
+              <Card 
+                className="hover:border-blue-300 transition-all cursor-pointer group"
+                onClick={() => navigate('/portal/mensagens')}
+              >
+                <CardContent className="p-6 flex items-center gap-4">
+                  <div className="p-3 bg-blue-100 rounded-xl text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors relative">
+                    <Mail className="w-6 h-6" />
+                    {mensagens.filter(m => m.sender_id !== user?.uid && !m.read).length > 0 && (
+                      <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full border-2 border-white flex items-center justify-center text-[8px] text-white font-bold">
+                        {mensagens.filter(m => m.sender_id !== user?.uid && !m.read).length}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-bold text-slate-900">{t('portal.dashboard.messages.title')}</h4>
+                    <p className="text-sm text-slate-500">{t('portal.dashboard.messages.description')}</p>
                   </div>
                   <ChevronRight className="w-5 h-5 ml-auto text-slate-300 group-hover:text-blue-600" />
                 </CardContent>
@@ -300,18 +261,18 @@ export function PortalDashboard() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-lg">
                   <Calendar className="w-5 h-5 text-blue-600" />
-                  Próximas Sessões
+                  {t('portal.dashboard.sessions.next_sessions')}
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 {agendamentos.length === 0 ? (
-                  <p className="text-center py-4 text-slate-500 text-sm">Nenhuma sessão agendada.</p>
+                  <p className="text-center py-4 text-slate-500 text-sm">{t('portal.dashboard.sessions.no_sessions')}</p>
                 ) : (
                   agendamentos.map((agendamento) => (
                     <div key={agendamento.id} className="space-y-2">
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-bold text-blue-600 uppercase">
-                          {format(new Date(agendamento.data_inicio), "dd 'de' MMMM", { locale: ptBR })}
+                          {format(new Date(agendamento.data_inicio), t('common.date_format_long'), { locale: currentLocale })}
                         </span>
                         <Badge variant="outline" className="text-[10px]">
                           {format(new Date(agendamento.data_inicio), "HH:mm")}
@@ -323,7 +284,7 @@ export function PortalDashboard() {
                   ))
                 )}
                 <Button variant="outline" className="w-full text-xs" onClick={() => navigate('/portal/agendamentos')}>
-                  Ver todos os agendamentos
+                  {t('portal.dashboard.sessions.view_all')}
                 </Button>
               </CardContent>
             </Card>
@@ -335,79 +296,21 @@ export function PortalDashboard() {
                   <User className="w-8 h-8 text-white" />
                 </div>
                 <div>
-                  <h4 className="font-bold text-lg">Seu Mentor</h4>
-                  <p className="text-slate-400 text-sm">Acompanhando sua jornada</p>
+                  <h4 className="font-bold text-lg">{t('portal.dashboard.mentor.title')}</h4>
+                  <p className="text-slate-400 text-sm">{t('portal.dashboard.mentor.description')}</p>
                 </div>
                 <Button 
-                  className="w-full bg-white text-slate-900 hover:bg-slate-100 gap-2"
-                  onClick={() => setIsMessageOpen(true)}
+                  className="w-full bg-white text-slate-900 hover:bg-slate-100 gap-2 font-bold"
+                  onClick={() => navigate('/portal/mensagens')}
                 >
                   <Mail className="w-4 h-4" />
-                  Enviar Mensagem
+                  {t('portal.dashboard.mentor.go_to_messages')}
                 </Button>
               </CardContent>
             </Card>
           </div>
         </div>
       </main>
-
-      {/* Messaging Dialog */}
-      <Dialog open={isMessageOpen} onOpenChange={setIsMessageOpen}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Mail className="w-5 h-5 text-blue-600" />
-              Falar com o Mentor
-            </DialogTitle>
-            <DialogDescription>
-              Envie uma mensagem ou dúvida para seu mentor. Ele será notificado.
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-4 py-4">
-            {/* Chat History Preview */}
-            <div className="max-h-[200px] overflow-y-auto space-y-3 p-3 bg-slate-50 rounded-lg border border-slate-100">
-              {mensagens.length > 0 ? (
-                mensagens.slice(-5).map((msg) => (
-                  <div key={msg.id} className={`flex flex-col ${msg.sender_id === user?.uid ? 'items-end' : 'items-start'}`}>
-                    <div className={`px-3 py-1.5 rounded-lg text-xs max-w-[90%] ${
-                      msg.sender_id === user?.uid ? 'bg-blue-600 text-white' : 'bg-white border border-slate-200 text-slate-700'
-                    }`}>
-                      {msg.content}
-                    </div>
-                    <span className="text-[9px] text-slate-400 mt-0.5">
-                      {msg.created_at?.toDate ? format(msg.created_at.toDate(), "HH:mm") : 'Agora'}
-                    </span>
-                  </div>
-                ))
-              ) : (
-                <p className="text-center text-xs text-slate-400 py-4 italic">Nenhuma mensagem anterior.</p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Textarea 
-                placeholder="Escreva sua mensagem aqui..." 
-                className="min-h-[120px] resize-none"
-                value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
-              />
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsMessageOpen(false)}>Cancelar</Button>
-            <Button 
-              onClick={handleSendMessage} 
-              disabled={isSendingMessage || !newMessage.trim()}
-              className="bg-blue-600 hover:bg-blue-700 gap-2"
-            >
-              <Send className="w-4 h-4" />
-              {isSendingMessage ? 'Enviando...' : 'Enviar Mensagem'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

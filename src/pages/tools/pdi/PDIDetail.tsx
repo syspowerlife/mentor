@@ -11,7 +11,9 @@ import {
   query, 
   where, 
   onSnapshot, 
-  Timestamp 
+  Timestamp,
+  or,
+  and
 } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '@/lib/firebase';
 import { calculateProgress } from '@/lib/metrics';
@@ -32,6 +34,7 @@ import { ArrowLeft, Target, BookOpen, MessageSquare, Activity, Plus, CheckCircle
 import { toast } from 'sonner';
 import { formatDateOrTimestamp } from '@/lib/utils';
 import { useLinkedUsers } from '@/hooks/useLinkedUsers';
+import { PDIStatus, PDIAcaoStatus, PDIMetaStatus, UserRole, NotificationType } from '@/types/enums';
 
 export function PDIDetail() {
   const { t } = useTranslation();
@@ -77,22 +80,63 @@ export function PDIDetail() {
     }, (error) => handleFirestoreError(error, OperationType.GET, 'pdis')));
 
     // Metas
-    unsubscribes.push(onSnapshot(query(collection(db, 'pdi_metas'), where('pdi_id', '==', id)), (snapshot) => {
+    unsubscribes.push(onSnapshot(query(
+      collection(db, 'pdi_metas'), 
+      and(
+        where('pdi_id', '==', id),
+        or(
+          where('profissional_id', '==', currentUser?.uid),
+          where('created_by', '==', currentUser?.uid),
+          where('cliente_uid', '==', currentUser?.uid)
+        )
+      )
+    ), (snapshot) => {
       setMetas(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     }, (error) => handleFirestoreError(error, OperationType.LIST, 'pdi_metas')));
 
     // Acoes
-    unsubscribes.push(onSnapshot(query(collection(db, 'pdi_acoes'), where('pdi_id', '==', id)), (snapshot) => {
+    unsubscribes.push(onSnapshot(query(
+      collection(db, 'pdi_acoes'), 
+      and(
+        where('pdi_id', '==', id),
+        or(
+          where('profissional_id', '==', currentUser?.uid),
+          where('created_by', '==', currentUser?.uid),
+          where('cliente_uid', '==', currentUser?.uid)
+        )
+      )
+    ), (snapshot) => {
       setAcoes(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     }, (error) => handleFirestoreError(error, OperationType.LIST, 'pdi_acoes')));
 
     // PDI Competencias
-    unsubscribes.push(onSnapshot(query(collection(db, 'pdi_competencias'), where('pdi_id', '==', id)), (snapshot) => {
+    unsubscribes.push(onSnapshot(query(
+      collection(db, 'pdi_competencias'), 
+      and(
+        where('pdi_id', '==', id),
+        or(
+          where('profissional_id', '==', currentUser?.uid),
+          where('created_by', '==', currentUser?.uid),
+          where('cliente_uid', '==', currentUser?.uid)
+        )
+      )
+    ), (snapshot) => {
       setPdiCompetencias(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     }, (error) => handleFirestoreError(error, OperationType.LIST, 'pdi_competencias')));
 
     // Feedbacks
-    unsubscribes.push(onSnapshot(query(collection(db, 'pdi_feedbacks'), where('pdi_id', '==', id)), (snapshot) => {
+    unsubscribes.push(onSnapshot(query(
+      collection(db, 'pdi_feedbacks'), 
+      and(
+        where('pdi_id', '==', id),
+        or(
+          where('profissional_id', '==', currentUser?.uid),
+          where('created_by', '==', currentUser?.uid),
+          where('cliente_uid', '==', currentUser?.uid),
+          where('autor_id', '==', currentUser?.uid)
+        )
+      )
+    ), (snapshot) => {
       setFeedbacks(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     }, (error) => handleFirestoreError(error, OperationType.LIST, 'pdi_feedbacks')));
 
@@ -137,7 +181,12 @@ export function PDIDetail() {
     mutationFn: async (data: any) => {
       const path = 'pdi_competencias';
       try {
-        await addDoc(collection(db, path), { ...data, pdi_id: id });
+        await addDoc(collection(db, path), { 
+          ...data, 
+          pdi_id: id,
+          cliente_uid: pdi.cliente_uid,
+          profissional_id: pdi.profissional_id
+        });
       } catch (error) {
         handleFirestoreError(error, OperationType.CREATE, path);
       }
@@ -145,7 +194,7 @@ export function PDIDetail() {
     onSuccess: () => {
       setIsNewCompetenciaOpen(false);
       setNewPdiCompetencia({ competencia_id: '', nivel_atual: '1', nivel_meta: '5' });
-      toast.success(t('pdi.competencies_tab.add_success') || 'Competência adicionada!');
+      toast.success(t('pdi.detail.competencies_tab.add_success') || 'Competência adicionada!');
     },
     onError: (error: any) => {
       toast.error(error.message || t('pdi.form.errors.create_error'));
@@ -156,7 +205,14 @@ export function PDIDetail() {
     mutationFn: async (data: any) => {
       const path = 'pdi_metas';
       try {
-        await addDoc(collection(db, path), { ...data, pdi_id: id, status: 'não iniciado', progresso: 0 });
+        await addDoc(collection(db, path), { 
+          ...data, 
+          pdi_id: id, 
+          status: PDIMetaStatus.NAO_INICIADO, 
+          progresso: 0,
+          cliente_uid: pdi.cliente_uid,
+          profissional_id: pdi.profissional_id
+        });
       } catch (error) {
         handleFirestoreError(error, OperationType.CREATE, path);
       }
@@ -164,7 +220,7 @@ export function PDIDetail() {
     onSuccess: () => {
       setIsNewMetaOpen(false);
       setNewMeta({ titulo: '', descricao: '', prazo: '' });
-      toast.success(t('pdi.goals_tab.meta_success') || 'Meta criada!');
+      toast.success(t('pdi.detail.goals_tab.meta_success') || 'Meta criada!');
     },
     onError: (error: any) => {
       toast.error(error.message || t('pdi.form.errors.create_error'));
@@ -179,7 +235,9 @@ export function PDIDetail() {
           ...data, 
           meta_id: selectedMetaId, 
           pdi_id: id, // Adicionado para validação de segurança
-          status: 'pendente' 
+          status: PDIAcaoStatus.PENDENTE,
+          cliente_uid: pdi.cliente_uid,
+          profissional_id: pdi.profissional_id
         });
       } catch (error) {
         handleFirestoreError(error, OperationType.CREATE, path);
@@ -188,7 +246,7 @@ export function PDIDetail() {
     onSuccess: () => {
       setIsNewAcaoOpen(false);
       setNewAcao({ descricao: '', prazo: '' });
-      toast.success(t('pdi.goals_tab.action_success') || 'Ação adicionada!');
+      toast.success(t('pdi.detail.goals_tab.action_success') || 'Ação adicionada!');
     },
     onError: (error: any) => {
       toast.error(error.message || t('pdi.form.errors.create_error'));
@@ -203,6 +261,8 @@ export function PDIDetail() {
           ...data, 
           pdi_id: id, 
           autor_id: currentUser?.uid, // Adicionado para validação de segurança
+          cliente_uid: pdi.cliente_uid,
+          profissional_id: pdi.profissional_id,
           data: new Date().toISOString() 
         });
       } catch (error) {
@@ -212,7 +272,7 @@ export function PDIDetail() {
     onSuccess: () => {
       setIsNewFeedbackOpen(false);
       setNewFeedback({ descricao: '' });
-      toast.success(t('pdi.feedbacks_tab.success') || 'Feedback registrado!');
+      toast.success(t('pdi.detail.feedbacks_tab.success') || 'Feedback registrado!');
     },
     onError: (error: any) => {
       toast.error(error.message || t('pdi.form.errors.create_error'));
@@ -287,7 +347,7 @@ export function PDIDetail() {
   });
 
   const pdiAcoes = acoes.filter((a: any) => metas.some((m: any) => m.id === a.meta_id));
-  const completedAcoes = pdiAcoes.filter((a: any) => a.status === 'concluido').length;
+  const completedAcoes = pdiAcoes.filter((a: any) => a.status === PDIAcaoStatus.CONCLUIDO).length;
   const totalAcoes = pdiAcoes.length;
   const progressoGeral = calculateProgress(completedAcoes, totalAcoes);
 
@@ -312,7 +372,7 @@ export function PDIDetail() {
           <p className="text-slate-500">{t('pdi.detail.collaborator')}: {userName}</p>
         </div>
           <div className="ml-auto flex items-center gap-2">
-            {(pdi.status === 'rascunho' || pdi.status === 'ajuste_solicitado') && (currentUser?.uid === pdi.usuario_id || currentUser?.uid === pdi.gestor_id || currentUserProfile?.role === 'admin') && (
+            {(pdi.status === PDIStatus.RASCUNHO || pdi.status === PDIStatus.AJUSTE_SOLICITADO) && (currentUser?.uid === pdi.usuario_id || currentUser?.uid === pdi.gestor_id || currentUserProfile?.role === UserRole.ADMIN) && (
               <Button 
                 variant="outline" 
                 size="sm"
@@ -324,12 +384,12 @@ export function PDIDetail() {
                 {t('pdi.detail.edit_dates')}
               </Button>
             )}
-          {(pdi.status === 'rascunho' || pdi.status === 'ajuste_solicitado') && currentUser?.uid === pdi.usuario_id && (
+          {(pdi.status === PDIStatus.RASCUNHO || pdi.status === PDIStatus.AJUSTE_SOLICITADO) && currentUser?.uid === pdi.usuario_id && (
             <Button 
               className="bg-blue-600 hover:bg-blue-700"
               onClick={async () => {
                 try {
-                  await updateDoc(doc(db, 'pdis', id!), { status: 'pendente_aprovacao' });
+                  await updateDoc(doc(db, 'pdis', id!), { status: PDIStatus.PENDENTE_APROVACAO });
                   
                   // Notify Manager
                   if (pdi.gestor_id) {
@@ -337,11 +397,26 @@ export function PDIDetail() {
                       userId: pdi.gestor_id,
                       title: 'Novo PDI para Aprovação',
                       message: `${currentUser?.displayName || 'Um colaborador'} enviou um PDI para sua revisão.`,
-                      type: 'info',
+                      type: NotificationType.INFO,
                       link: `/ferramentas/pdi/aprovacao`,
                       triggerId: `pdi_submit_${id}`
                     });
                   }
+                  
+                  const token = await currentUser?.getIdToken();
+                  await fetch('/api/notifications/notify-pdi-change', {
+                    method: 'POST',
+                    headers: { 
+                      'Content-Type': 'application/json',
+                      'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ 
+                      pdiId: id, 
+                      status: 'em_aprovacao', 
+                      studentId: currentUser.uid, 
+                      mentorId: pdi.gestor_id 
+                    })
+                  });
                   
                   toast.success(t('pdi.form.success.submitted'));
                 } catch (error) {
@@ -352,10 +427,10 @@ export function PDIDetail() {
               {t('pdi.detail.submit_approval')}
             </Button>
           )}
-          <Badge variant={pdi.status === 'ativo' ? 'default' : pdi.status === 'pendente_aprovacao' ? 'warning' : pdi.status === 'ajuste_solicitado' ? 'destructive' : 'secondary'} className="text-sm px-3 py-1">
-            {t(`pdi.status.${pdi.status === 'pendente_aprovacao' ? 'pending_approval' : pdi.status === 'ajuste_solicitado' ? 'adjustment_requested' : pdi.status === 'concluido' ? 'completed' : pdi.status === 'rascunho' ? 'draft' : pdi.status === 'cancelado' ? 'cancelled' : 'active'}`).toUpperCase()}
+          <Badge variant={pdi.status === PDIStatus.ATIVO ? 'default' : pdi.status === PDIStatus.PENDENTE_APROVACAO ? 'warning' : pdi.status === PDIStatus.AJUSTE_SOLICITADO ? 'destructive' : 'secondary'} className="text-sm px-3 py-1">
+            {t(`pdi.status.${pdi.status === PDIStatus.PENDENTE_APROVACAO ? 'pending_approval' : pdi.status === PDIStatus.AJUSTE_SOLICITADO ? 'adjustment_requested' : pdi.status === PDIStatus.CONCLUIDO ? 'completed' : pdi.status === PDIStatus.RASCUNHO ? 'draft' : pdi.status === PDIStatus.CANCELADO ? 'cancelled' : 'active'}`).toUpperCase()}
           </Badge>
-          {(currentUser?.uid === pdi.gestor_id || currentUserProfile?.role === 'admin') && (
+          {(currentUser?.uid === pdi.gestor_id || currentUserProfile?.role === UserRole.ADMIN) && (
             <Button 
               variant="ghost" 
               size="icon" 
@@ -506,12 +581,12 @@ export function PDIDetail() {
                             {metaAcoes.map((acao: any) => (
                               <li key={acao.id} className="flex items-center gap-3 p-2 rounded-md hover:bg-slate-50 border border-transparent hover:border-slate-100">
                                 <button 
-                                  onClick={() => toggleAcaoStatus.mutate({ id: acao.id, status: acao.status === 'concluido' ? 'pendente' : 'concluido' })}
+                                  onClick={() => toggleAcaoStatus.mutate({ id: acao.id, status: acao.status === PDIAcaoStatus.CONCLUIDO ? PDIAcaoStatus.PENDENTE : PDIAcaoStatus.CONCLUIDO })}
                                   className="text-slate-400 hover:text-blue-600 transition-colors"
                                 >
-                                  {acao.status === 'concluido' ? <CheckCircle2 className="w-5 h-5 text-green-500" /> : <Circle className="w-5 h-5" />}
+                                  {acao.status === PDIAcaoStatus.CONCLUIDO ? <CheckCircle2 className="w-5 h-5 text-green-500" /> : <Circle className="w-5 h-5" />}
                                 </button>
-                                <span className={`flex-1 text-sm ${acao.status === 'concluido' ? 'text-slate-400 line-through' : 'text-slate-700'}`}>
+                                <span className={`flex-1 text-sm ${acao.status === PDIAcaoStatus.CONCLUIDO ? 'text-slate-400 line-through' : 'text-slate-700'}`}>
                                   {acao.descricao}
                                 </span>
                                 <span className="text-xs text-slate-400">{t('pdi.detail.goals_tab.deadline')}: {formatDateOrTimestamp(acao.prazo)}</span>

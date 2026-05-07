@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { collection, addDoc, Timestamp } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '@/lib/firebase';
 import { useAuth } from '@/lib/AuthContext';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useParams } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -11,9 +11,13 @@ import { Label } from '@/components/ui/label';
 import { Star, MessageSquareHeart, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { sendNotification } from '@/lib/notifications';
+import { doc, getDoc } from 'firebase/firestore';
+import { useTranslation } from 'react-i18next';
 
 export function AvaliacaoCliente() {
   const { user } = useAuth();
+  const { t, i18n } = useTranslation();
+  const { id } = useParams();
   const [searchParams] = useSearchParams();
   const mentorId = searchParams.get('mentorId');
   const sessaoId = searchParams.get('sessaoId');
@@ -23,18 +27,47 @@ export function AvaliacaoCliente() {
   const [pontosPositivos, setPontosPositivos] = useState('');
   const [pontosMelhoria, setPontosMelhoria] = useState('');
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isReadOnly, setIsReadOnly] = useState(false);
+
+  // Load existing evaluation if id is provided
+  useEffect(() => {
+    async function loadData() {
+      if (!id) return;
+      
+      try {
+        const docRef = doc(db, 'avaliacoes_sessoes', id);
+        const docSnap = await getDoc(docRef);
+        
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          setNota(data.nota || 0);
+          setPontosPositivos(data.pontosPositivos || '');
+          setPontosMelhoria(data.pontosMelhoria || '');
+          setIsReadOnly(true);
+        } else {
+          toast.error(t('evaluation.errors.not_found'));
+        }
+      } catch (error: any) {
+        toast.error(t('common.error_loading_data') + ': ' + error.message);
+      }
+    }
+    
+    loadData();
+  }, [id]);
 
   const mutation = useMutation({
     mutationFn: async (avaliacao: any) => {
-      if (!user) throw new Error('Você precisa estar logado para avaliar.');
-      if (!mentorId) throw new Error('ID do mentor não identificado.');
+      if (!user) throw new Error(t('evaluation.errors.login_required'));
+      if (!mentorId) throw new Error(t('evaluation.errors.missing_mentor'));
 
       const path = 'avaliacoes_sessoes';
       try {
         await addDoc(collection(db, path), {
           ...avaliacao,
           mentor_id: mentorId,
+          profissional_id: mentorId, // Added for security rules
           cliente_id: user.uid,
+          cliente_uid: user.uid, // Added for security rules
           sessao_id: sessaoId || null,
           data: Timestamp.now()
         });
@@ -44,30 +77,30 @@ export function AvaliacaoCliente() {
     },
     onSuccess: () => {
       setIsSubmitted(true);
-      toast.success('Feedback enviado com sucesso!');
+      toast.success(t('evaluation.success.toast'));
 
       if (mentorId && user) {
         sendNotification({
           userId: mentorId,
-          title: 'Novo Feedback Recebido',
-          message: `${user.displayName || user.email} enviou uma avaliação sobre a sessão.`,
+          title: t('evaluation.notifications.new_title'),
+          message: t('evaluation.notifications.new_msg', { name: user.displayName || user.email }),
           type: 'success',
           link: `/Admin/Resultados?userId=${user.uid}`
         });
       }
     },
     onError: (error: any) => {
-      toast.error(error.message || 'Erro ao enviar avaliação.');
+      toast.error(error.message || t('evaluation.errors.submit_error'));
     }
   });
 
   const handleSave = () => {
     if (nota === 0) {
-      toast.error('Por favor, selecione uma nota para a sessão.');
+      toast.error(t('evaluation.errors.select_rating'));
       return;
     }
     if (!mentorId) {
-      toast.error('Link de avaliação inválido (mentorId ausente).');
+      toast.error(t('evaluation.errors.invalid_link'));
       return;
     }
     mutation.mutate({
@@ -77,14 +110,14 @@ export function AvaliacaoCliente() {
     });
   };
 
-  if (!mentorId) {
+  if (!mentorId && !id) {
     return (
       <div className="p-6 md:p-8 max-w-2xl mx-auto text-center space-y-6 mt-12">
         <div className="w-20 h-20 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto">
           <AlertCircle className="w-10 h-10" />
         </div>
-        <h2 className="text-3xl font-bold text-slate-800">Link Inválido</h2>
-        <p className="text-slate-600 text-lg">Este link de avaliação não contém as informações necessárias. Por favor, solicite um novo link ao seu mentor.</p>
+        <h2 className="text-3xl font-bold text-slate-800">{t('evaluation.invalid_link.title')}</h2>
+        <p className="text-slate-600 text-lg">{t('evaluation.invalid_link.message')}</p>
       </div>
     );
   }
@@ -95,15 +128,15 @@ export function AvaliacaoCliente() {
         <div className="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto">
           <MessageSquareHeart className="w-10 h-10" />
         </div>
-        <h2 className="text-3xl font-bold text-slate-800">Avaliação Enviada!</h2>
-        <p className="text-slate-600 text-lg">Muito obrigado pelo seu feedback. Ele é essencial para continuarmos melhorando nosso processo.</p>
+        <h2 className="text-3xl font-bold text-slate-800">{t('evaluation.success.title')}</h2>
+        <p className="text-slate-600 text-lg">{t('evaluation.success.message')}</p>
         <Button onClick={() => {
           setIsSubmitted(false);
           setNota(0);
           setPontosPositivos('');
           setPontosMelhoria('');
         }} variant="outline" className="mt-4">
-          Enviar Nova Avaliação
+          {t('evaluation.form.new_btn')}
         </Button>
       </div>
     );
@@ -114,20 +147,20 @@ export function AvaliacaoCliente() {
       <div>
         <h1 className="text-3xl font-bold text-slate-800 flex items-center gap-3">
           <MessageSquareHeart className="w-8 h-8 text-blue-600" />
-          Avaliação da Sessão
+          {t('evaluation.title')}
         </h1>
-        <p className="text-slate-500 mt-1">Deixe seu feedback sobre a última sessão de mentoring.</p>
+        <p className="text-slate-500 mt-1">{t('evaluation.description')}</p>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Formulário de Feedback</CardTitle>
-          <CardDescription>Sua opinião nos ajuda a direcionar melhor os próximos encontros.</CardDescription>
+          <CardTitle>{t('evaluation.form.title')}</CardTitle>
+          <CardDescription>{t('evaluation.form.subtitle')}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-8">
           
           <div className="space-y-4 text-center py-4">
-            <Label className="text-lg font-medium">Como você avalia a sessão de hoje?</Label>
+            <Label className="text-lg font-medium">{t('evaluation.form.question_rating')}</Label>
             <div className="flex justify-center gap-2">
               {[1, 2, 3, 4, 5].map((star) => (
                 <button
@@ -149,41 +182,41 @@ export function AvaliacaoCliente() {
               ))}
             </div>
             <div className="text-sm font-medium text-slate-500 h-5">
-              {nota === 1 && 'Ruim'}
-              {nota === 2 && 'Regular'}
-              {nota === 3 && 'Bom'}
-              {nota === 4 && 'Muito Bom'}
-              {nota === 5 && 'Excelente'}
+              {nota > 0 && t(`evaluation.form.rating_labels.${nota}`)}
             </div>
           </div>
 
           <div className="space-y-3">
-            <Label className="text-base">O que foi mais valioso na sessão de hoje?</Label>
+            <Label className="text-base">{t('evaluation.form.valuable_label')}</Label>
             <Textarea 
               className="min-h-[100px]" 
-              placeholder="Descreva os pontos altos, insights ou aprendizados..."
+              placeholder={t('evaluation.form.valuable_placeholder')}
               value={pontosPositivos}
               onChange={(e) => setPontosPositivos(e.target.value)}
+              disabled={isReadOnly}
             />
           </div>
 
           <div className="space-y-3">
-            <Label className="text-base">O que poderia ser melhorado para as próximas sessões?</Label>
+            <Label className="text-base">{t('evaluation.form.improvement_label')}</Label>
             <Textarea 
               className="min-h-[100px]" 
-              placeholder="Sugestões, dúvidas não respondidas ou tópicos que gostaria de aprofundar..."
+              placeholder={t('evaluation.form.improvement_placeholder')}
               value={pontosMelhoria}
               onChange={(e) => setPontosMelhoria(e.target.value)}
+              disabled={isReadOnly}
             />
           </div>
 
-          <Button 
-            onClick={handleSave} 
-            className="w-full bg-blue-600 hover:bg-blue-700 text-lg h-12"
-            disabled={mutation.isPending}
-          >
-            {mutation.isPending ? 'Enviando...' : 'Enviar Avaliação'}
-          </Button>
+          {!isReadOnly && (
+            <Button 
+              onClick={handleSave} 
+              className="w-full bg-blue-600 hover:bg-blue-700 text-lg h-12"
+              disabled={mutation.isPending}
+            >
+              {mutation.isPending ? t('evaluation.form.submitting') : t('evaluation.form.submit_btn')}
+            </Button>
+          )}
         </CardContent>
       </Card>
     </div>

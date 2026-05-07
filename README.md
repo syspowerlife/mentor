@@ -1,20 +1,54 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# PowerLife - Sistema de Gestão Estratégica e Liderança
 
-# Run and deploy your AI Studio app
+O PowerLife é uma plataforma full-stack moderna para coaches, gestores e profissionais de desenvolvimento humano, focada em assessments (DISC, SWOT, Roda da Vida) e gestão de clientes com inteligência artificial.
 
-This contains everything you need to run your app locally.
+## 🚀 Tecnologias
 
-View your app in AI Studio: https://ai.studio/apps/89f4787c-c31e-4545-bc06-7e1a194c7439
+- **Frontend**: React 18, Vite, Tailwind CSS, Framer Motion, Lucide React.
+- **Backend**: Node.js, Express (integrado com Vite via middleware).
+- **Banco de Dados & Auth**: Firebase (Firestore, Auth).
+- **IA**: Google Gemini API (modelos Flash/Pro para insights).
+- **Pagamentos**: Mercado Pago (Integração total com Webhooks e Assinaturas).
+- **Comunicação**: Resend (E-mails transacionais).
 
-## Run Locally
+## 🛠️ Instalação e Execução
 
-**Prerequisites:**  Node.js
+1. **Clone o repositório**:
+   ```bash
+   git clone https://github.com/seu-usuario/powerlife.git
+   cd powerlife
+   ```
 
+2. **Instale as dependências**:
+   ```bash
+   npm install
+   ```
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+3. **Configure o ambiente**:
+   - Copie o `.env.example` para `.env`.
+   - Preencha as chaves do Firebase, Mercado Pago, Gemini e Resend.
+   - Adicione o arquivo `firebase-applet-config.json` na raiz.
+
+4. **Inicie em modo desenvolvimento**:
+   ```bash
+   npm run dev
+   ```
+
+## 🏗️ Estrutura do Projeto
+
+- `/src/pages`: Páginas principais (Dashboard, Clientes, Assessments).
+- `/src/components`: Componentes reutilizáveis e UI (shadcn).
+- `/src/services`: Integrações com APIs externas (Gemini, Firebase).
+- `/server.ts`: Servidor Express com lógica de webhooks e API.
+- `/firestore.rules`: Regras de segurança robustas do banco de dados.
+
+## 🔒 Segurança (Plan Gate System)
+
+O sistema possui um sistema de níveis de acesso:
+- **FREE**: Limite de 3 clientes, sem IA, sem Google Calendar.
+- **PRO**: Até 20 clientes, IA integrada, Google Calendar.
+- **MASTER**: Clientes ilimitados, branding personalizado, suporte prioritário.
+
+## 📄 Licença
+
+Este projeto está sob a licença MIT. Consulte o arquivo [LICENSE](LICENSE) para mais detalhes.

@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { toast } from 'sonner';
 import { UserPlus, Mail, Lock, User, ArrowLeft } from 'lucide-react';
 import { sendNotification } from '@/lib/notifications';
+import { NotificationType } from '@/types/enums';
 
 const logoUrl = 'https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68f695b8ca770d93e4eed7a4/6336fe853_POWERLIFE-app-small.png';
 
@@ -35,7 +36,7 @@ export function Register() {
           userId: user.uid,
           title: 'Bem-vindo ao PowerLife!',
           message: `Olá ${name}, estamos felizes em ter você conosco. Comece cadastrando seu primeiro cliente!`,
-          type: 'success'
+          type: NotificationType.SUCCESS
         });
       }
 
@@ -63,7 +64,7 @@ export function Register() {
           userId: user.uid,
           title: 'Bem-vindo ao PowerLife!',
           message: `Olá ${user.displayName || 'usuário'}, estamos felizes em ter você conosco. Comece cadastrando seu primeiro cliente!`,
-          type: 'success'
+          type: NotificationType.SUCCESS
         });
       }
 

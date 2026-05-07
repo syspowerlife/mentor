@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Check, Loader2, Zap, ShieldCheck, Star } from 'lucide-react';
 import { useAuth } from '@/lib/AuthContext';
 import { toast } from 'sonner';
+import { FeatureFallback } from './FeatureFallback';
 
 interface Plan {
   id: string;
@@ -103,11 +104,15 @@ export function PricingTable() {
 
     setLoadingPlan(planId);
     try {
-      const response = await fetch('/api/payments/create-preference', {
+      // Determinar se é um plano recorrente (assinatura) ou pagamento único
+      // Todo plano pago no PowerLife agora é tratado como Assinatura para permitir recorrência
+      const endpoint = '/api/payments/create-subscription';
+      
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          plan: planId,
+          planId: planId,
           userId: user.uid,
           email: user.email,
           name: userData?.name || user.displayName || 'Usuário PowerLife'
@@ -118,7 +123,7 @@ export function PricingTable() {
       if (data.init_point) {
         window.location.href = data.init_point;
       } else {
-        throw new Error('URL de checkout não encontrada');
+        throw new Error('URL de checkout não encontrada. Entre em contato com o suporte.');
       }
     } catch (error: any) {
       console.error(error);
@@ -129,7 +134,8 @@ export function PricingTable() {
   };
 
   return (
-    <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto py-12 px-4 relative">
+    <FeatureFallback feature={['stripe', 'mercadopago']} mode="any" label="Gateways de Pagamento">
+      <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto py-12 px-4 relative">
       {loading && (
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-white/50 backdrop-blur-sm">
           <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
@@ -205,5 +211,6 @@ export function PricingTable() {
         </Card>
       ))}
     </div>
+    </FeatureFallback>
   );
 }

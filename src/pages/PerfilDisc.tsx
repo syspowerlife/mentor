@@ -1,17 +1,19 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { collection, addDoc, Timestamp, updateDoc, doc } from 'firebase/firestore';
+import { collection, addDoc, Timestamp, updateDoc, doc, getDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage, handleFirestoreError, OperationType } from '@/lib/firebase';
 import { useAuth } from '@/lib/AuthContext';
-import { useSearchParams, Link } from 'react-router-dom';
+import { useSearchParams, Link, useParams } from 'react-router-dom';
 import { useDisc } from '@/hooks/useDisc';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { ExportPdfButton } from '@/components/ExportPdfButton';
+import { AISuggestionCard } from '@/components/AISuggestionCard';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Cell } from 'recharts';
 import { toast } from 'sonner';
 import { DiscReport } from '@/components/tools/DiscReport';
@@ -79,11 +81,14 @@ const CORES_DISC = {
 };
 
 export function PerfilDisc() {
+  const { t } = useTranslation();
   const { user } = useAuth();
+  const { id } = useParams();
   const [searchParams] = useSearchParams();
   const clienteId = searchParams.get('clienteId');
+  const clienteUid = searchParams.get('clienteUid');
   
-  const [loading, setLoading] = useState(!!clienteId);
+  const [loading, setLoading] = useState(!!(clienteId || id));
   const [titulo, setTitulo] = useState('');
   const [respostas, setRespostas] = useState<Record<number, number>>(
     PERGUNTAS.reduce((acc, p) => ({ ...acc, [p.id]: 5 }), {})
@@ -92,7 +97,7 @@ export function PerfilDisc() {
   const [showProfessionalReport, setShowProfessionalReport] = useState(false);
   const [isSyncingPdf, setIsSyncingPdf] = useState(false);
 
-  const { latestDisc, discs, isLoading: isLoadingDisc } = useDisc(clienteId);
+  const { latestDisc, discs, isLoading: isLoadingDisc } = useDisc(id ? null : clienteId);
 
   const mutation = useMutation({
     mutationFn: async (novoDisc: any) => {
@@ -101,8 +106,10 @@ export function PerfilDisc() {
         const docRef = await addDoc(collection(db, path), {
           ...novoDisc,
           created_by: user?.uid,
+          profissional_id: user?.uid,
           created_at: Timestamp.now(),
-          cliente_id: clienteId || null
+          cliente_id: clienteId || null,
+          cliente_uid: clienteUid || null
         });
         return { id: docRef.id, ...novoDisc };
       } catch (error) {
@@ -111,21 +118,45 @@ export function PerfilDisc() {
     },
     onSuccess: (data) => {
       setResultado(data);
-      toast.success('Avaliação DISC salva com sucesso!');
+      toast.success(t('disc.success.saved'));
     },
     onError: (error: any) => {
       console.error(error);
-      toast.error(error.message || 'Erro ao salvar avaliação DISC.');
+      toast.error(error.message || t('disc.errors.fill_title')); // Fallback error
     }
   });
 
-  // Load latest DISC if clienteId is provided
+  // Load existing DISC if id is provided
   useEffect(() => {
-    if (latestDisc) {
+    async function loadData() {
+      if (!id) return;
+      
+      try {
+        const docRef = doc(db, 'perfis_disc', id);
+        const docSnap = await getDoc(docRef);
+        
+        if (docSnap.exists()) {
+          setResultado({ id: docSnap.id, ...docSnap.data() });
+        } else {
+          toast.error(t('disc.errors.not_found'));
+        }
+      } catch (error: any) {
+        toast.error(t('common.error_loading_data') + ': ' + error.message);
+      } finally {
+        setLoading(false);
+      }
+    }
+    
+    loadData();
+  }, [id, t]);
+
+  // Load latest DISC if clienteId is provided (only if not viewing a specific ID)
+  useEffect(() => {
+    if (!id && latestDisc) {
       setResultado(latestDisc);
     }
-    setLoading(isLoadingDisc);
-  }, [latestDisc, isLoadingDisc]);
+    if (!id) setLoading(isLoadingDisc);
+  }, [latestDisc, isLoadingDisc, id]);
 
   if (loading) return <ToolSkeleton />;
 
@@ -206,25 +237,28 @@ export function PerfilDisc() {
   return (
     <div className="p-6 md:p-8 max-w-7xl mx-auto space-y-8">
       <div className="flex justify-between items-center flex-wrap gap-4">
-        <h1 className="text-3xl font-bold text-slate-800">Perfil DISC</h1>
+        <h1 className="text-3xl font-bold text-slate-800">{t('disc.title')}</h1>
         <div className="flex gap-2">
           {resultado && (
             <>
               {resultado.pdf_url && (
-                <Button variant="outline" asChild>
-                  <a href={resultado.pdf_url} target="_blank" rel="noopener noreferrer">
+                  <a 
+                    href={resultado.pdf_url} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className={buttonVariants({ variant: "outline" })}
+                  >
                     <Download className="w-4 h-4 mr-2" />
-                    Baixar PDF Salvo
+                    {t('disc.pdf.download')}
                   </a>
-                </Button>
               )}
               {!resultado.pdf_url && (
                 <ExportPdfButton 
                   targetId={showProfessionalReport ? "professional-report" : "print-disc"} 
                   filename="perfil-disc" 
-                  title="Relatório: Perfil DISC" 
+                  title={`Relatório: ${t('disc.title')}`} 
                   onBlobGenerated={handleSavePdfToStorage}
-                  buttonText="Gerar e Salvar PDF"
+                  buttonText={t('disc.pdf.generate_save')}
                   className="bg-blue-600 text-white hover:bg-blue-700"
                 />
               )}
@@ -232,7 +266,7 @@ export function PerfilDisc() {
                 variant={showProfessionalReport ? "default" : "outline"} 
                 onClick={() => setShowProfessionalReport(!showProfessionalReport)}
               >
-                {showProfessionalReport ? "Ver Resumo" : "Relatório IA"}
+                {showProfessionalReport ? t('disc.view_summary') : t('disc.report_ia')}
               </Button>
             </>
           )}
@@ -244,7 +278,7 @@ export function PerfilDisc() {
           <CardHeader className="pb-2">
             <CardTitle className="text-lg flex items-center gap-2">
               <History className="w-5 h-5 text-blue-600" />
-              Histórico de Avaliações
+              {t('disc.history')}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -253,18 +287,21 @@ export function PerfilDisc() {
                 <div key={d.id} className="p-4 bg-white rounded-lg border border-slate-200 flex justify-between items-center group hover:border-blue-300 transition-colors">
                   <div>
                     <div className="font-medium text-slate-900">{d.titulo}</div>
-                    <div className="text-xs text-slate-500">{d.created_at?.toDate().toLocaleDateString()}</div>
+                    <div className="text-xs text-slate-500">{t('disc.results.performed_at')} {d.created_at?.toDate().toLocaleDateString()}</div>
                   </div>
                   <div className="flex gap-2">
                     <Button variant="ghost" size="sm" onClick={() => setResultado(d)}>
                       <ExternalLink className="w-4 h-4" />
                     </Button>
                     {d.pdf_url && (
-                      <Button variant="ghost" size="sm" asChild>
-                        <a href={d.pdf_url} target="_blank" rel="noopener noreferrer">
-                          <Download className="w-4 h-4" />
-                        </a>
-                      </Button>
+                      <a 
+                        href={d.pdf_url} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className={buttonVariants({ variant: "ghost", size: "sm" })}
+                      >
+                        <Download className="w-4 h-4" />
+                      </a>
                     )}
                   </div>
                 </div>
@@ -272,7 +309,7 @@ export function PerfilDisc() {
             </div>
             {discs.length > 3 && (
               <div className="mt-4 text-center">
-                <Button variant="link" className="text-blue-600">Ver todas as {discs.length} avaliações</Button>
+                <Button variant="link" className="text-blue-600">{t('disc.view_all_assessments') || 'Ver todas'}</Button>
               </div>
             )}
           </CardContent>
@@ -282,16 +319,16 @@ export function PerfilDisc() {
       {!resultado ? (
         <Card className="bg-white/60 backdrop-blur-sm shadow-sm max-w-3xl mx-auto">
           <CardHeader>
-            <CardTitle>Questionário de Avaliação</CardTitle>
+            <CardTitle>{t('disc.form.title')}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-8">
             <div className="space-y-2">
-              <Label>Título da Avaliação</Label>
-              <Input value={titulo} onChange={e => setTitulo(e.target.value)} placeholder="Ex: Avaliação DISC 2026" />
+              <Label>{t('disc.form.title_label')}</Label>
+              <Input value={titulo} onChange={e => setTitulo(e.target.value)} placeholder={t('disc.form.title_placeholder')} />
             </div>
 
             <div className="space-y-6">
-              <p className="text-sm text-slate-500">Avalie cada afirmação de 0 (Discordo Totalmente) a 10 (Concordo Totalmente).</p>
+              <p className="text-sm text-slate-500">{t('disc.form.description')}</p>
               {PERGUNTAS.map(p => (
                 <div key={p.id} className="space-y-2 p-4 bg-slate-50 rounded-lg border border-slate-100">
                   <div className="flex justify-between">
@@ -309,14 +346,14 @@ export function PerfilDisc() {
             </div>
 
             <Button onClick={calcularResultado} className="w-full" disabled={mutation.isPending}>
-              {mutation.isPending ? 'Calculando...' : 'Calcular Resultado'}
+              {mutation.isPending ? t('disc.form.calculating') : t('disc.form.calculate')}
             </Button>
           </CardContent>
         </Card>
       ) : showProfessionalReport ? (
         <DiscReport 
           userData={{ 
-            nome: user?.displayName || user?.email || 'Usuário', 
+            nome: user?.displayName || user?.email || t('disc.unknown_user') || 'Usuário', 
             data: resultado.created_at instanceof Timestamp ? resultado.created_at.toDate().toLocaleDateString() : new Date().toLocaleDateString() 
           }}
           respostas={resultado.respostas || []}
@@ -327,7 +364,7 @@ export function PerfilDisc() {
           <Card className="bg-white/60 backdrop-blur-sm shadow-sm">
             <CardHeader className="text-center">
               <CardTitle className="text-2xl">{resultado.titulo}</CardTitle>
-              <p className="text-slate-500">Realizado em {resultado.created_at instanceof Timestamp ? resultado.created_at.toDate().toLocaleDateString() : new Date().toLocaleDateString()}</p>
+              <p className="text-slate-500">{t('disc.results.performed_at')} {resultado.created_at instanceof Timestamp ? resultado.created_at.toDate().toLocaleDateString() : new Date().toLocaleDateString()}</p>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -347,25 +384,25 @@ export function PerfilDisc() {
                   </ResponsiveContainer>
                 </div>
                 <div className="space-y-4">
-                  <h3 className="text-xl font-bold">Seu Perfil Dominante: <span style={{color: CORES_DISC[resultado.perfil_dominante as keyof typeof CORES_DISC]}}>{resultado.perfil_dominante}</span></h3>
+                  <h3 className="text-xl font-bold">{t('disc.results.dominant')}: <span style={{color: CORES_DISC[resultado.perfil_dominante as keyof typeof CORES_DISC]}}>{resultado.perfil_dominante}</span></h3>
                   <p className="text-slate-700 leading-relaxed">
                     {resultado.descricao_perfil}
                   </p>
                   <div className="grid grid-cols-2 gap-4 mt-6">
                     <div className="p-4 bg-red-50 rounded-lg border border-red-100">
-                      <div className="font-bold text-red-700">D - Dominância</div>
+                      <div className="font-bold text-red-700">{t('disc.labels.d')}</div>
                       <div className="text-2xl font-bold">{resultado.dominancia}%</div>
                     </div>
                     <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-100">
-                      <div className="font-bold text-yellow-700">I - Influência</div>
+                      <div className="font-bold text-yellow-700">{t('disc.labels.i')}</div>
                       <div className="text-2xl font-bold">{resultado.influencia}%</div>
                     </div>
                     <div className="p-4 bg-green-50 rounded-lg border border-green-100">
-                      <div className="font-bold text-green-700">S - Estabilidade</div>
+                      <div className="font-bold text-green-700">{t('disc.labels.s')}</div>
                       <div className="text-2xl font-bold">{resultado.estabilidade}%</div>
                     </div>
                     <div className="p-4 bg-blue-50 rounded-lg border border-blue-100">
-                      <div className="font-bold text-blue-700">C - Conformidade</div>
+                      <div className="font-bold text-blue-700">{t('disc.labels.c')}</div>
                       <div className="text-2xl font-bold">{resultado.conformidade}%</div>
                     </div>
                   </div>
@@ -377,15 +414,18 @@ export function PerfilDisc() {
                   <div className="flex items-center gap-3">
                     <CheckCircle2 className="w-6 h-6 text-green-600" />
                     <div>
-                      <div className="font-bold text-green-900">Relatório PDF Persistido</div>
-                      <div className="text-sm text-green-700">Uma cópia completa desta análise está salva no sistema.</div>
+                      <div className="font-bold text-green-900">{t('disc.pdf.persisted_title')}</div>
+                      <div className="text-sm text-green-700">{t('disc.pdf.persisted_desc')}</div>
                     </div>
                   </div>
-                  <Button variant="outline" className="border-green-200 text-green-700 hover:bg-green-100" asChild>
-                    <a href={resultado.pdf_url} target="_blank" rel="noopener noreferrer">
-                      Abrir PDF
-                    </a>
-                  </Button>
+                  <a 
+                    href={resultado.pdf_url} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className={buttonVariants({ variant: "outline", className: "border-green-200 text-green-700 hover:bg-green-100" })}
+                  >
+                    {t('disc.pdf.open')}
+                  </a>
                 </div>
               )}
 
@@ -394,26 +434,34 @@ export function PerfilDisc() {
                   <div className="flex items-center gap-3">
                     <AlertCircle className="w-6 h-6 text-blue-600" />
                     <div>
-                      <div className="font-bold text-blue-900">Salvar PDF no Sistema</div>
-                      <div className="text-sm text-blue-700">Gere o PDF para garantir que esta análise fique salva permanentemente como documento.</div>
+                      <div className="font-bold text-blue-900">{t('disc.pdf.generate_save')}</div>
+                      <div className="text-sm text-blue-700">{t('disc.pdf.save_desc')}</div>
                     </div>
                   </div>
                   <ExportPdfButton 
                     targetId={showProfessionalReport ? "professional-report" : "print-disc"} 
                     filename="perfil-disc" 
-                    title="Relatório: Perfil DISC" 
+                    title={`Relatório: ${t('disc.title')}`} 
                     onBlobGenerated={handleSavePdfToStorage}
-                    buttonText="Gerar e Salvar Agora"
+                    buttonText={t('disc.pdf.save_now')}
                   />
                 </div>
               )}
 
               <div className="mt-8 text-center no-print flex justify-center gap-4">
-                <Button variant="outline" onClick={() => setResultado(null)}>Fazer Nova Avaliação</Button>
-                <Button onClick={() => setShowProfessionalReport(true)}>Gerar Relatório Profissional Completo</Button>
+                <Button variant="outline" onClick={() => setResultado(null)}>{t('disc.new_assessment')}</Button>
+                <Button onClick={() => setShowProfessionalReport(true)}>{t('disc.full_report')}</Button>
               </div>
             </CardContent>
           </Card>
+
+          {/* AI Insight Section */}
+          <div className="mt-8 no-print">
+            <AISuggestionCard 
+              discData={resultado}
+              clienteId={clienteId}
+            />
+          </div>
         </div>
       )}
     </div>

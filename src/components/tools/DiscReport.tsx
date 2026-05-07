@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { GoogleGenAI, Type } from "@google/genai";
+import { FeatureFallback } from "@/components/FeatureFallback";
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Loader2, FileText, Download, Share2, Printer, Activity, AlertCircle } from 'lucide-react';
@@ -30,6 +31,9 @@ export function DiscReport({ userData, respostas, perguntasBase }: DiscReportPro
   const generateReport = async () => {
     setLoading(true);
     try {
+      if (!process.env.GEMINI_API_KEY) {
+        throw new Error("GEMINI_API_KEY não configurada no ambiente.");
+      }
       const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
       
       const prompt = `
@@ -152,18 +156,20 @@ Retorne um JSON estruturado seguindo exatamente este esquema:
 
   if (!report) {
     return (
-      <div className="text-center p-8 space-y-4">
-        <div className="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
-          <FileText className="w-8 h-8" />
+      <FeatureFallback feature="gemini">
+        <div className="text-center p-8 space-y-4">
+          <div className="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
+            <FileText className="w-8 h-8" />
+          </div>
+          <h3 className="text-xl font-bold text-slate-800">Relatório Profissional DISC</h3>
+          <p className="text-slate-500 max-w-md mx-auto">
+            Gere um relatório completo com análise profunda, pontos fortes, motivadores e ambiente ideal baseado nas suas respostas.
+          </p>
+          <Button onClick={generateReport} className="bg-blue-600 hover:bg-blue-700">
+            Gerar Relatório com IA
+          </Button>
         </div>
-        <h3 className="text-xl font-bold text-slate-800">Relatório Profissional DISC</h3>
-        <p className="text-slate-500 max-w-md mx-auto">
-          Gere um relatório completo com análise profunda, pontos fortes, motivadores e ambiente ideal baseado nas suas respostas.
-        </p>
-        <Button onClick={generateReport} className="bg-blue-600 hover:bg-blue-700">
-          Gerar Relatório com IA
-        </Button>
-      </div>
+      </FeatureFallback>
     );
   }
 

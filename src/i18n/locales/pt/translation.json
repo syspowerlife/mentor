@@ -8,9 +8,14 @@
     "search": "Pesquisar",
     "actions": "Ações",
     "notifications": "Notificações",
+    "date_format_long": "dd 'de' MMMM",
+    "error_loading_data": "Erro ao carregar dados",
+    "error_saving_data": "Erro ao salvar dados",
     "profile": "Perfil",
     "settings": "Configurações",
-    "logout": "Sair"
+    "logout": "Sair",
+    "of": "de",
+    "processing": "Processando..."
   },
   "menu": {
     "dashboard": "Dashboard",
@@ -120,7 +125,9 @@
         "action_plan": "Plano de Ação",
         "add_action": "Adicionar Ação",
         "no_actions": "Nenhuma ação cadastrada.",
-        "deadline": "Prazo"
+        "deadline": "Prazo",
+        "meta_success": "Meta criada com sucesso!",
+        "action_success": "Ação adicionada com sucesso!"
       },
       "competencies_tab": {
         "title": "Competências em Desenvolvimento",
@@ -131,11 +138,13 @@
         "soft_skill": "Soft Skill",
         "hard_skill": "Hard Skill",
         "current_level": "Nível Atual",
-        "target_level": "Meta"
+        "target_level": "Meta",
+        "add_success": "Competência vinculada com sucesso!"
       },
       "feedbacks_tab": {
         "title": "Feedbacks Contínuos",
-        "new": "Novo Feedback"
+        "new": "Novo Feedback",
+        "success": "Feedback registrado com sucesso!"
       },
       "reports_tab": {
         "title": "Relatórios do PDI",
@@ -234,6 +243,617 @@
       "unavailable": "O serviço está indisponível no momento.",
       "unauthenticated": "Você precisa estar logado para realizar esta ação.",
       "default": "Ocorreu um erro inesperado. Tente novamente."
+    }
+  },
+  "roda": {
+    "title": "Roda da Vida",
+    "new_assessment": "Nova Avaliação",
+    "history": "Histórico Recente",
+    "visualization": "Visualização",
+    "save_btn": "Salvar Avaliação",
+    "saving": "Salvando...",
+    "types": {
+      "atual": "Estado Atual",
+      "desejado": "Estado Desejado"
+    },
+    "labels": {
+      "saude_fisica": "Saúde Física",
+      "desenvolvimento_mental": "Desenvolvimento Mental",
+      "inteligencia_emocional": "Inteligência Emocional",
+      "familia": "Família",
+      "romance": "Romance",
+      "vida_social": "Vida Social",
+      "carreira": "Carreira",
+      "financas": "Finanças",
+      "contribuicao_social": "Contribuição Social",
+      "divertimento_lazer": "Diversão/Lazer",
+      "saude_ambiente": "Saúde do Ambiente"
+    },
+    "success": {
+      "saved": "Avaliação salva com sucesso!"
+    },
+    "errors": {
+      "not_found": "Avaliação não encontrada.",
+      "fill_title": "Preencha o título."
+    }
+  },
+  "swot": {
+    "title": "Análise SWOT",
+    "save_btn": "Salvar Análise",
+    "saving": "Salvando...",
+    "title_label": "Título da Análise",
+    "title_placeholder": "Ex: Análise de Carreira 2026",
+    "action_plan_title": "Plano de Ação",
+    "action_plan_placeholder": "Descreva as ações a serem tomadas com base nesta análise...",
+    "sections": {
+      "strengths": "Forças (Strengths)",
+      "weaknesses": "Fraquezas (Weaknesses)",
+      "opportunities": "Oportunidades (Opportunities)",
+      "threats": "Ameaças (Threats)"
+    },
+    "placeholders": {
+      "add_strength": "Adicionar força...",
+      "add_weakness": "Adicionar fraqueza...",
+      "add_opportunity": "Adicionar oportunidade...",
+      "add_threat": "Adicionar ameaça..."
+    },
+    "success": {
+      "saved": "Análise SWOT salva com sucesso!"
+    },
+    "errors": {
+      "not_found": "Análise SWOT não encontrada.",
+      "fill_title": "Preencha o título da análise."
+    }
+  },
+  "smart": {
+    "title": "Metas SMART",
+    "subtitle": "Acompanhe suas metas através do quadro Kanban.",
+    "new_goal": "Nova Meta",
+    "kanban": {
+      "to_do": "A Fazer",
+      "in_progress": "Em Andamento",
+      "completed": "Concluída",
+      "paused": "Pausada",
+      "pending": "Pendente"
+    },
+    "form": {
+      "create_title": "Criar Nova Meta SMART",
+      "edit_title": "Editar Meta SMART",
+      "title_label": "Título da Meta",
+      "title_placeholder": "Ex: Aumentar faturamento em 20%",
+      "s": "S - Específica (Specific)",
+      "m": "M - Mensurável (Measurable)",
+      "a": "A - Atingível (Achievable)",
+      "r": "R - Relevante (Relevant)",
+      "t": "T - Temporal (Time-bound)",
+      "deadline": "Data Limite",
+      "status": "Status",
+      "save": "Salvar Meta",
+      "saving": "Salvando..."
+    },
+    "success": {
+      "created": "Meta criada com sucesso!",
+      "updated": "Meta atualizada!",
+      "deleted": "Meta excluída!"
+    },
+    "notifications": {
+      "new_title": "Nova Meta SMART",
+      "new_msg": "A meta \"{{titulo}}\" foi definida com sucesso.",
+      "completed_title": "Meta Concluída! 🎉",
+      "completed_msg": "Parabéns por atingir seu objetivo. Continue com esse foco!"
+    }
+  },
+  "progress": {
+    "title": "Acompanhamento de Progresso",
+    "description": "Visualize a evolução dos indicadores e metas ao longo do tempo.",
+    "filters": {
+      "last_6_months": "Últimos 6 meses"
+    },
+    "sessions": {
+      "register_btn": "Registrar Sessão",
+      "history_title": "Histórico de Sessões e Notas",
+      "empty": "Nenhuma sessão registrada para este período.",
+      "no_notes": "Sem notas registradas.",
+      "edit_title": "Editar Sessão",
+      "new_title": "Registrar Nova Sessão",
+      "desc": "Registre os principais pontos e o progresso percebido nesta sessão.",
+      "form": {
+        "title": "Título da Sessão",
+        "date": "Data",
+        "related_goals": "Metas Relacionadas",
+        "perceived_progress": "Progresso Percebido (0-10)",
+        "notes": "Notas e Observações",
+        "title_placeholder": "Ex: Sessão 05 - Foco em Carreira",
+        "deadline": "Prazo: ",
+        "notes_placeholder": "O que foi discutido? Quais os próximos passos?",
+        "saving": "Salvando...",
+        "save_btn": "Salvar Sessão"
+      },
+      "success": {
+        "updated": "Sessão atualizada!",
+        "registered": "Sessão registrada!",
+        "deleted": "Sessão excluída."
+      }
+    },
+    "stats": {
+      "roda_avg": "Média Roda da Vida (Atual)",
+      "vs_previous": "vs anterior",
+      "metas_completed": "Metas Concluídas (Total)",
+      "accumulated": "acumulado no período",
+      "growth_rate": "Taxa de Crescimento",
+      "based_on_roda": "baseado na Roda da Vida"
+    },
+    "charts": {
+      "longitudinal": "Evolução Longitudinal",
+      "indicators_desc": "Cruzamento de indicadores de bem-estar e produtividade",
+      "roda_vida": "Roda da Vida",
+      "humor_diario": "Humor (Diário)",
+      "progresso_sessao": "Progresso Sessão",
+      "deliveries_volume": "Volume mensal de entregas",
+      "metas": "Metas",
+      "global_avg": "Média Global"
+    }
+  },
+  "evaluation": {
+    "title": "Avaliação da Sessão",
+    "description": "Deixe seu feedback sobre a última sessão de mentoring.",
+    "form": {
+      "title": "Formulário de Feedback",
+      "subtitle": "Sua opinião nos ajuda a direcionar melhor os próximos encontros.",
+      "question_rating": "Como você avalia a sessão de hoje?",
+      "rating_labels": {
+        "1": "Ruim",
+        "2": "Regular",
+        "3": "Bom",
+        "4": "Muito Bom",
+        "5": "Excelente"
+      },
+      "valuable_label": "O que foi mais valioso na sessão de hoje?",
+      "valuable_placeholder": "Descreva os pontos altos, insights ou aprendizados...",
+      "improvement_label": "O que poderia ser melhorado para as próximas sessões?",
+      "improvement_placeholder": "Sugestões, dúvidas não respondidas ou tópicos que gostaria de aprofundar...",
+      "submit_btn": "Enviar Avaliação",
+      "submitting": "Enviando...",
+      "new_btn": "Enviar Nova Avaliação"
+    },
+    "success": {
+      "title": "Avaliação Enviada!",
+      "message": "Muito obrigado pelo seu feedback. Ele é essencial para continuarmos melhorando nosso processo.",
+      "toast": "Feedback enviado com sucesso!"
+    },
+    "errors": {
+      "not_found": "Avaliação não encontrada.",
+      "login_required": "Você precisa estar logado para avaliar.",
+      "missing_mentor": "ID do mentor não identificado.",
+      "invalid_link": "Link de avaliação inválido (mentorId ausente).",
+      "select_rating": "Por favor, selecione uma nota para a sessão.",
+      "submit_error": "Erro ao enviar avaliação."
+    },
+    "invalid_link": {
+      "title": "Link Inválido",
+      "message": "Este link de avaliação não contém as informações necessárias. Por favor, solicite um novo link ao seu mentor."
+    },
+    "notifications": {
+      "new_title": "Novo Feedback Recebido",
+      "new_msg": "{{name}} enviou uma avaliação sobre a sessão."
+    }
+  },
+  "dossier": {
+    "title": "Dossiê Consolidado",
+    "subtitle": "Relatório integrativo de avaliações",
+    "export_pdf": "Exportar PDF",
+    "generating": "Gerando...",
+    "cover": {
+      "journey_of": "Jornada de",
+      "subtitle": "Relatório integrativo de avaliações comportamentais, ferramentas estratégicas e planejamento de metas.",
+      "mentor_label": "Mentor Responsável",
+      "default_mentor": "Profissional PowerLife"
+    },
+    "roda": {
+      "title": "Diagnóstico: Roda da Vida",
+      "quote": "\"O equilíbrio não é algo que você encontra, é algo que você cria.\" A Roda da Vida representa a satisfação atual em 11 áreas fundamentais do ser.",
+      "leverage_points": {
+        "title": "Pontos de Alavancagem",
+        "desc": "Áreas com maior impacto no sistema se trabalhadas prioritariamente."
+      },
+      "critical_areas": {
+        "title": "Áreas Críticas",
+        "desc": "Níveis de satisfação abaixo de 4 que necessitam de intervenção imediata."
+      }
+    },
+    "behavior": {
+      "title": "Perfil Comportamental",
+      "disc_title": "Metodologia DISC",
+      "disc_desc": "Representação das tendências de comportamento em quatro quadrantes.",
+      "values_title": "Valores Pessoais",
+      "values_empty": "Valores não definidos",
+      "ia_comments_title": "Comentários de Inteligência Comportamental",
+      "ia_comments_template": "O cliente apresenta perfil predominante em <0>{{profileName}}</0>, o que sugere uma busca por resultados e eficiência. Seus valores de <1>{{values}}</1> servem como bússola para tomadas de decisão."
+    },
+    "swot": {
+      "title": "Matriz Estratégica (SWOT)",
+      "empty": "Não preenchido"
+    },
+    "action": {
+      "title": "Ação: Metas SMART e PDI",
+      "active_goals": "Metas Ativas",
+      "pdi_title": "Plano de Desenvolvimento (PDI)",
+      "pdi_desc": "O PDI completo foi detalhado e está em acompanhamento contínuo no sistema PowerLife. <br /> Foram mapeadas <strong>{{count}} ações estratégicas</strong> para este ciclo."
+    },
+    "footer": {
+      "end": "Fim do Relatório",
+      "system": "PowerLife Mentoring System"
+    }
+  },
+  "diary": {
+    "title": "Diário de Reflexão",
+    "description": "Registre seus pensamentos, aprendizados e sentimentos diários.",
+    "new_entry": {
+      "title": "Nova Reflexão",
+      "question": "Como você está se sentindo hoje?",
+      "mind_label": "O que está em sua mente?",
+      "mind_placeholder": "Escreva sobre suas conquistas, desafios ou pensamentos do dia...",
+      "privacy": {
+        "label": "Privacidade",
+        "private_desc": "Apenas você pode ver este registro.",
+        "shared_desc": "Seu mentor poderá visualizar esta reflexão.",
+        "private": "Privado",
+        "shared": "Compartilhado"
+      },
+      "save_btn": "Salvar Reflexão",
+      "saving": "Salvando..."
+    },
+    "history": {
+      "title": "Histórico",
+      "loading": "Carregando histórico...",
+      "empty": "Nenhuma reflexão registrada ainda. Comece escrevendo acima!"
+    },
+    "sentiments": {
+      "happy": "Feliz",
+      "neutral": "Neutro",
+      "sad": "Triste"
+    },
+    "success": {
+      "toast": "Reflexão salva com sucesso!"
+    },
+    "errors": {
+      "not_found": "Reflexão não encontrada.",
+      "empty_content": "Escreva algo antes de salvar.",
+      "save_error": "Erro ao salvar reflexão."
+    }
+  },
+  "disc": {
+    "title": "Perfil DISC",
+    "history": "Histórico de Avaliações",
+    "report_ia": "Relatório IA",
+    "view_summary": "Ver Resumo",
+    "new_assessment": "Fazer Nova Avaliação",
+    "full_report": "Gerar Relatório Profissional Completo",
+    "form": {
+      "title": "Questionário de Avaliação",
+      "description": "Avalie cada afirmação de 0 (Discordo Totalmente) a 10 (Concordo Totalmente).",
+      "title_label": "Título da Avaliação",
+      "title_placeholder": "Ex: Avaliação DISC 2026",
+      "calculate": "Calcular Resultado",
+      "calculating": "Calculando..."
+    },
+    "results": {
+      "dominant": "Seu Perfil Dominante",
+      "performed_at": "Realizado em",
+      "description": "Descrição do Perfil"
+    },
+    "labels": {
+      "d": "D - Dominância",
+      "i": "I - Influência",
+      "s": "S - Estabilidade",
+      "c": "C - Conformidade"
+    },
+    "pdf": {
+      "download": "Baixar PDF Salvo",
+      "generate_save": "Gerar e Salvar PDF",
+      "persist_success": "Relatório PDF salvo permanentemente!",
+      "persist_error": "Erro ao salvar PDF no servidor.",
+      "persisted_title": "Relatório PDF Persistido",
+      "persisted_desc": "Uma cópia completa desta análise está salva no sistema.",
+      "open": "Abrir PDF",
+      "save_now": "Gerar e Salvar Agora",
+      "save_desc": "Gere o PDF para garantir que esta análise fique salva permanentemente como documento."
+    },
+    "success": {
+      "saved": "Avaliação DISC salva com sucesso!"
+    },
+    "errors": {
+      "not_found": "Avaliação DISC não encontrada.",
+      "fill_title": "Preencha o título da avaliação."
+    }
+  },
+  "values": {
+    "title": "Valores Pessoais",
+    "form": {
+      "title": "Identificação de Valores",
+      "title_label": "Título da Avaliação",
+      "title_placeholder": "Ex: Meus Valores 2026",
+      "step1_desc": "Selecione até 10 valores mais importantes para você:",
+      "step2_desc": "Para cada valor selecionado, avalie de 1 a 10 a importância dele na sua vida e o quanto você sente que o está praticando atualmente.",
+      "importance_label": "Importância",
+      "practice_label": "Quanto estou praticando",
+      "reflections": "Reflexões",
+      "reflections_placeholder": "O que você percebe ao comparar a importância dos seus valores com a prática deles?",
+      "next": "Próxima Etapa",
+      "back": "Voltar",
+      "save": "Salvar Avaliação",
+      "saving": "Salvando...",
+      "new_assessment": "Nova Avaliação"
+    },
+    "success": {
+      "saved": "Avaliação de Valores salva com sucesso!"
+    },
+    "errors": {
+      "not_found": "Avaliação de Valores não encontrada.",
+      "fill_title": "Preencha o título da avaliação.",
+      "max_reached": "Selecione no máximo 10 valores."
+    },
+    "list": {
+      "honesty": "Honestidade",
+      "freedom": "Liberdade",
+      "family": "Família",
+      "health": "Saúde",
+      "success": "Sucesso",
+      "peace": "Paz",
+      "love": "Amor",
+      "respect": "Respeito",
+      "security": "Segurança",
+      "adventure": "Aventura",
+      "creativity": "Criatividade",
+      "justice": "Justiça",
+      "wisdom": "Sabedoria",
+      "loyalty": "Lealdade",
+      "growth": "Crescimento",
+      "joy": "Alegria",
+      "friendship": "Amizade",
+      "autonomy": "Autonomia",
+      "beauty": "Beleza",
+      "compassion": "Compaixão",
+      "competence": "Competência",
+      "knowledge": "Conhecimento",
+      "courage": "Coragem",
+      "determination": "Determinação",
+      "equity": "Equidade",
+      "spirituality": "Espiritualidade",
+      "stability": "Estabilidade",
+      "excellence": "Excelência",
+      "fame": "Fama",
+      "faith": "Fé",
+      "generosity": "Generosidade",
+      "harmony": "Harmonia",
+      "humility": "Humildade",
+      "independence": "Independência",
+      "innovation": "Inovação",
+      "integrity": "Integridade",
+      "leadership": "Liderança",
+      "power": "Poder",
+      "recognition": "Reconhecimento",
+      "responsibility": "Responsabilidade",
+      "wealth": "Riqueza",
+      "tradition": "Tradição",
+      "teamwork": "Trabalho em Equipe",
+      "truth": "Verdade"
+    }
+  },
+  "portal": {
+    "login": {
+      "welcome_success": "Bem-vindo ao seu Portal!",
+      "mentor_account_error": "Esta conta é de um mentor. Use o login de mentor.",
+      "activated_success": "Portal ativado com sucesso!",
+      "unauthorized": "Acesso não autorizado. Entre em contato com seu mentor.",
+      "access_not_enabled": "Seu mentor ainda não ativou seu acesso ao portal.",
+      "signup_success": "Conta criada com sucesso!",
+      "login_desc": "Acesse seu progresso e acompanhe suas metas",
+      "signup_desc": "Crie sua conta para acessar o portal",
+      "full_name": "Nome Completo",
+      "name_placeholder": "Seu nome",
+      "email": "E-mail",
+      "email_placeholder": "seu@email.com",
+      "password": "Senha",
+      "login_btn": "Entrar no Portal",
+      "signup_btn": "Criar Conta",
+      "no_account": "Não tem conta? Cadastre-se",
+      "has_account": "Já tem conta? Entre aqui"
+    },
+    "dashboard": {
+      "title": "Portal do Mentorado",
+      "mentee": "Mentorado",
+      "welcome": "Olá, {{name}}! 👋",
+      "welcome_desc": "Bem-vindo ao seu portal de mentoria. Aqui você pode acompanhar seu progresso, visualizar suas metas e gerenciar seus agendamentos.",
+      "unlinked": {
+        "title": "Acesso não vinculado",
+        "description": "Não encontramos um perfil de mentorado vinculado a este e-mail.",
+        "logout": "Sair e tentar outro e-mail"
+      },
+      "smart_goals": {
+        "title": "Suas Metas SMART",
+        "description": "Acompanhe o que você definiu com seu mentor",
+        "completed": "Concluídas",
+        "general_progress": "Progresso Geral",
+        "no_metas": "Nenhuma meta cadastrada ainda."
+      },
+      "evaluations": {
+        "title": "Avaliações",
+        "description": "Responda seus formulários"
+      },
+      "messages": {
+        "title": "Mensagens",
+        "description": "Fale com seu mentor",
+        "chat_title": "Conversa com seu Mentor",
+        "async": "Asíncrona",
+        "search_placeholder": "Buscar na conversa...",
+        "no_results": "Nenhuma mensagem encontrada para sua busca.",
+        "start_chat": "Inicie a conversa com seu mentor enviando uma mensagem abaixo.",
+        "read": "Lido",
+        "sent": "Enviado",
+        "input_placeholder": "Digite sua mensagem aqui...",
+        "notification_info": "Seu mentor será notificado e responderá assim que possível.",
+        "error_sending": "Erro ao enviar mensagem: "
+      },
+      "mentor": {
+        "title": "Seu Mentor",
+        "description": "Acompanhando sua jornada",
+        "go_to_messages": "Ir para Mensagens"
+      }
+    },
+    "sessions": {
+      "title": "Seus Agendamentos",
+      "next_sessions": "Próximas Sessões",
+      "no_sessions_future": "Nenhuma sessão agendada para o futuro.",
+      "history": "Histórico de Sessões",
+      "no_sessions_history": "Nenhum histórico de sessões.",
+      "confirmed": "Confirmado",
+      "meeting_link": "Link da Reunião",
+      "join_session": "Entrar na Sessão"
+    },
+    "evolution": {
+      "title": "Sua Evolução",
+      "completed_goals": "Metas Concluídas",
+      "current_average": "Média Atual (Roda da Vida)",
+      "history_title": "Evolução do Equilíbrio (Histórico)",
+      "history_desc": "Acompanhe o crescimento da sua média geral da Roda da Vida ao longo das avaliações.",
+      "radar_title": "Equilíbrio de Vida",
+      "radar_desc": "Último resultado detalhado da sua Roda da Vida",
+      "disc_title": "Perfil Comportamental",
+      "disc_desc": "Seu perfil predominante (DISC)",
+      "no_roda_history": "O gráfico de evolução aparecerá após sua segunda Roda da Vida.",
+      "no_roda_data": "Nenhuma Roda da Vida realizada ainda.",
+      "no_disc_data": "Perfil DISC ainda não avaliado.",
+      "avg_global": "Média Global"
+    },
+    "evaluations": {
+      "title": "Avaliações",
+      "back": "Voltar ao Início",
+      "choose_tool": "Escolha uma ferramenta",
+      "choose_tool_desc": "Selecione a avaliação que deseja realizar agora.",
+      "roda": {
+        "name": "Roda da Vida",
+        "description": "Avalie o equilíbrio das áreas da sua vida",
+        "form_title": "Avalie seu momento atual",
+        "form_desc": "Dê uma nota de 0 a 10 para cada área da sua vida.",
+        "save_success": "Roda da Vida salva com sucesso!",
+        "save_error": "Erro ao salvar avaliação.",
+        "areas": {
+          "saude_fisica": "Saúde Física",
+          "desenvolvimento_mental": "Desenvolvimento Mental",
+          "inteligencia_emocional": "Inteligência Emocional",
+          "familia": "Família",
+          "romance": "Romance",
+          "vida_social": "Vida Social",
+          "carreira": "Carreira",
+          "financas": "Finanças",
+          "contribuicao_social": "Contribuição Social",
+          "divertimento_lazer": "Diversão/Lazer",
+          "saude_ambiente": "Saúde do Ambiente"
+        }
+      },
+      "swot": {
+        "title": "Análise SWOT (Matriz FOFA)",
+        "description": "Preencha os quadrantes abaixo. Separe cada item usando uma nova linha (Enter).",
+        "strengths_title": "Forças (Fatores Internos)",
+        "strengths_desc": "O que você faz bem? Quais são seus talentos, vantagens e diferenciais?",
+        "strengths_placeholder": "Ex: Boa comunicação\nResiliência",
+        "weaknesses_title": "Fraquezas (Fatores Internos)",
+        "weaknesses_desc": "O que precisa melhorar? Quais habilidades ou recursos estão faltando?",
+        "weaknesses_placeholder": "Ex: Falta de fluência em inglês\nDesorganização com horários",
+        "opportunities_title": "Oportunidades (Fatores Externos)",
+        "opportunities_desc": "Quais cenários, tendências ou contatos você pode aproveitar a seu favor?",
+        "opportunities_placeholder": "Ex: Mercado em expansão\nPossibilidade de promoção",
+        "threats_title": "Ameaças (Fatores Externos)",
+        "threats_desc": "Quais obstáculos, competidores ou mudanças podem prejudicar seu objetivo?",
+        "threats_placeholder": "Ex: Crise econômica\nNovos concorrentes no mercado",
+        "save_success": "Análise SWOT salva com sucesso!",
+        "save_error": "Erro ao salvar Análise SWOT."
+      },
+      "disc": {
+        "title": "Perfil Comportamental DISC",
+        "description": "Para cada grupo de comportamentos abaixo, escolha um que MAIS se parece com você e um que MENOS se parece com você.",
+        "question_count": "Questão {{current}} de {{total}}",
+        "most": "Mais (+)",
+        "least": "Menos (-)",
+        "next": "Próxima Questão",
+        "back": "Anterior",
+        "finish": "Finalizar e Salvar",
+        "save_success": "Perfil DISC salvo com sucesso!",
+        "save_error": "Erro ao salvar perfil DISC.",
+        "questions": {
+          "1": {
+            "d": "Decidido, focado em resultados",
+            "i": "Entusiasta, comunicativo",
+            "s": "Paciente, bom ouvinte",
+            "c": "Analítico, atento a detalhes"
+          },
+          "2": {
+            "d": "Competitivo, gosta de desafios",
+            "i": "Persuasivo, gosta de influenciar",
+            "s": "Estável, evita mudanças bruscas",
+            "c": "Sistemático, segue regras"
+          },
+          "3": {
+            "d": "Direto, vai direto ao ponto",
+            "i": "Otimista, vê o lado bom",
+            "s": "Gentil, prestativo",
+            "c": "Preciso, busca a perfeição"
+          },
+          "4": {
+            "d": "Ousado, assume riscos",
+            "i": "Popular, gosta de estar entre pessoas",
+            "s": "Leal, valoriza relacionamentos",
+            "c": "Lógico, baseia-se em fatos"
+          },
+          "5": {
+            "d": "Independente, age por conta própria",
+            "i": "Animado, contagia os outros",
+            "s": "Calmo, mantém o equilíbrio",
+            "c": "Cuidadoso, evita erros"
+          },
+          "6": {
+            "d": "Autoconfiante, acredita no seu potencial",
+            "i": "Sociável, faz amigos facilmente",
+            "s": "Amigável, acolhedor",
+            "c": "Organizado, mantém tudo em ordem"
+          },
+          "7": {
+            "d": "Forte, não desiste fácil",
+            "i": "Expressivo, demonstra emoções",
+            "s": "Cooperativo, trabalha bem em equipe",
+            "c": "Perfeccionista, foca na qualidade"
+          },
+          "8": {
+            "d": "Rápido, gosta de agilidade",
+            "i": "Charmoso, capta a atenção",
+            "s": "Metódico, prefere rotina",
+            "c": "Disciplinado, cumpre prazos"
+          },
+          "9": {
+            "d": "Vigoroso, tem muita energia",
+            "i": "Inspirador, motiva os outros",
+            "s": "Confiável, cumpre o que promete",
+            "c": "Racional, pensa antes de agir"
+          },
+          "10": {
+            "d": "Questionador, busca o porquê",
+            "i": "Descontraído, prefere ambiente leve",
+            "s": "Previsível, gosta de segurança",
+            "c": "Cauteloso, avalia os riscos"
+          }
+        }
+      },
+      "valores": {
+        "title": "Valores Pessoais",
+        "description": "Os valores guiam suas decisões e comportamentos. Identificar seus valores centrais ajuda a alinhar seus objetivos com o que realmente importa para você.",
+        "selected": "Selecionados",
+        "status_ideal": "Ótimo! Você selecionou uma quantidade ideal de valores. Se quiser, pode selecionar mais {{count}} ou finalizar.",
+        "status_missing": "Selecione pelo menos {{count}} valores para continuar (Máximo de 10).",
+        "save_success": "Valores Pessoais salvos com sucesso!",
+        "save_error": "Erro ao salvar Valores Pessoais."
+      },
+      "save_button": "Salvar Avaliação"
     }
   }
 }

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { collection, query, where, getDocs, updateDoc, doc, orderBy, limit, startAfter, getCountFromServer, addDoc, deleteDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, updateDoc, doc, getDoc, setDoc, orderBy, limit, startAfter, getCountFromServer, addDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/lib/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -10,7 +10,8 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { UserPlus, Edit, ShieldAlert, Loader2, TrendingUp, User, Key, Mail, Trash2, Plus, GripVertical } from 'lucide-react';
+import { UserPlus, Edit, Edit2, Save, ShieldAlert, Loader2, TrendingUp, User, Key, Mail, MessageCircle, FileText, Trash2, Plus, GripVertical, CheckCircle2, AlertCircle, Activity } from 'lucide-react';
+import { useFeatures } from '@/hooks/useFeatures';
 import { UserSelector } from '@/components/UserSelector';
 import { ClientResults } from '@/components/ClientResults';
 import { DataTableFilter } from '@/components/DataTableFilter';
@@ -18,12 +19,13 @@ import { Pagination } from '@/components/Pagination';
 import { BatchExportButton } from '@/components/BatchExportButton';
 import { EngagementIndicator } from '@/components/EngagementIndicator';
 import { PlanManager } from '@/components/PlanManager';
-import { handleApiResponse, formatDateTime } from '@/lib/utils';
+import { handleApiResponse, formatDateTime, cn } from '@/lib/utils';
 import { AuditLogService } from '@/services/AuditLogService';
 import { toast } from 'sonner';
 import { TableSkeleton } from '@/components/skeletons/FeedbackSkeletons';
 import { AdminMetricsGrid } from '@/components/AdminMetricsGrid';
 import { History, Search, Filter, Calendar } from 'lucide-react';
+import { UserRole } from '@/types/enums';
 
 export function AdminPanel() {
   const queryClient = useQueryClient();
@@ -286,7 +288,7 @@ export function AdminPanel() {
           especialidade: userEdit.especialidade, 
           telefone: userEdit.telefone,
           plan: userEdit.plan || 'free',
-          role: userEdit.role || 'user'
+          role: userEdit.role || UserRole.USER
         } 
       });
     }
@@ -330,7 +332,7 @@ export function AdminPanel() {
       </div>
 
       <div className="flex space-x-1 bg-slate-200/50 p-1 rounded-lg w-fit overflow-x-auto max-w-full">
-        {['dashboard', 'usuarios', 'planos', 'resultados', 'faq', 'logs'].map(tab => (
+        {['dashboard', 'usuarios', 'planos', 'resultados', 'faq', 'logs', 'config'].map(tab => (
           <button
             key={tab}
             onClick={() => setAbaAtiva(tab)}
@@ -340,7 +342,8 @@ export function AdminPanel() {
              tab === 'usuarios' ? 'Assinantes e Usuários' : 
              tab === 'planos' ? 'Planos (Mercado Pago)' : 
              tab === 'resultados' ? 'Resultados por Cliente' : 
-             tab === 'faq' ? 'Gestão de FAQ' : 'Logs de Atividade'}
+             tab === 'faq' ? 'Gestão de FAQ' : 
+             tab === 'logs' ? 'Logs de Atividade' : 'Configuração'}
           </button>
         ))}
       </div>
@@ -403,7 +406,7 @@ export function AdminPanel() {
                             <Switch 
                               checked={u.habilitado} 
                               onCheckedChange={() => handleToggleStatus(u)} 
-                              disabled={u.role === 'admin' || mutationUpdateUser.isPending} 
+                              disabled={u.role === UserRole.ADMIN || mutationUpdateUser.isPending} 
                             />
                           </div>
                         </td>
@@ -415,7 +418,7 @@ export function AdminPanel() {
                             <Button variant="ghost" size="icon" onClick={() => handleResetPassword(u.email)} title="Resetar Senha">
                               <Key className="w-4 h-4 text-orange-500" />
                             </Button>
-                            <Button variant="ghost" size="icon" onClick={() => { setUserToDelete(u); setIsDeleteOpen(true); }} title="Excluir Usuário" disabled={u.role === 'admin'}>
+                            <Button variant="ghost" size="icon" onClick={() => { setUserToDelete(u); setIsDeleteOpen(true); }} title="Excluir Usuário" disabled={u.role === UserRole.ADMIN}>
                               <Trash2 className="w-4 h-4 text-red-500" />
                             </Button>
                           </div>
@@ -483,6 +486,10 @@ export function AdminPanel() {
         <ActivityLogTable />
       )}
 
+      {abaAtiva === 'config' && (
+        <SystemConfigTab />
+      )}
+
       {/* Dialog Editar Usuário */}
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
         <DialogContent>
@@ -509,12 +516,12 @@ export function AdminPanel() {
                   <Label>Tipo (Role)</Label>
                   <select 
                     className="w-full p-2 rounded-md border border-slate-200 text-sm"
-                    value={userEdit.role || 'user'}
+                    value={userEdit.role || UserRole.USER}
                     onChange={e => setUserEdit({...userEdit, role: e.target.value})}
                   >
-                    <option value="user">Mentor</option>
-                    <option value="client">Cliente</option>
-                    <option value="admin">Admin</option>
+                    <option value={UserRole.USER}>Mentor</option>
+                    <option value={UserRole.CLIENT}>Cliente</option>
+                    <option value={UserRole.ADMIN}>Admin</option>
                   </select>
                 </div>
               </div>
@@ -581,12 +588,12 @@ export function AdminPanel() {
                 <Label>Tipo de Usuário</Label>
                 <select 
                   className="w-full p-2 rounded-md border border-slate-200 text-sm"
-                  value={(inviteData as any).role || 'user'}
+                  value={(inviteData as any).role || UserRole.USER}
                   onChange={e => setInviteData({...inviteData, role: e.target.value} as any)}
                 >
-                  <option value="user">Mentor / Profissional</option>
-                  <option value="client">Cliente</option>
-                  <option value="admin">Administrador</option>
+                  <option value={UserRole.USER}>Mentor / Profissional</option>
+                  <option value={UserRole.CLIENT}>Cliente</option>
+                  <option value={UserRole.ADMIN}>Administrador</option>
                 </select>
               </div>
             </div>
@@ -808,6 +815,32 @@ function FAQEditor() {
   const queryClient = useQueryClient();
   const [isAddFaqOpen, setIsAddFaqOpen] = useState(false);
   const [newFaq, setNewFaq] = useState({ question: '', answer: '', category: 'Geral', active: true });
+  const [faqToEdit, setFaqToEdit] = useState<any>(null);
+  const [isEditFaqOpen, setIsEditFaqOpen] = useState(false);
+  
+  const [isEditingSupportConfig, setIsEditingSupportConfig] = useState(false);
+  const [supportDraft, setSupportDraft] = useState<any>(null);
+
+  const { data: supportConfig } = useQuery({
+    queryKey: ['support-config-admin'],
+    queryFn: async () => {
+      const docRef = doc(db, 'settings', 'support');
+      const docSnap = await getDoc(docRef);
+      return docSnap.exists() ? docSnap.data() : null;
+    }
+  });
+
+  const mutationUpdateSupport = useMutation({
+    mutationFn: async (data: any) => {
+      await setDoc(doc(db, 'settings', 'support'), data, { merge: true });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['support-config'] });
+      queryClient.invalidateQueries({ queryKey: ['support-config-admin'] });
+      toast.success('Configurações de suporte atualizadas!');
+      setIsEditingSupportConfig(false);
+    }
+  });
 
   const { data: faqs, isLoading } = useQuery({
     queryKey: ['faqs'],
@@ -850,11 +883,51 @@ function FAQEditor() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['faqs'] })
   });
 
+  const mutationUpdateFaq = useMutation({
+    mutationFn: async ({ id, data }: { id: string, data: any }) => {
+      await updateDoc(doc(db, 'faqs', id), data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['faqs'] });
+      setIsEditFaqOpen(false);
+      setFaqToEdit(null);
+      toast.success('FAQ atualizado com sucesso!');
+    }
+  });
+
   if (isLoading) return <TableSkeleton />;
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white/40 p-4 rounded-xl border border-slate-200">
+        <div>
+          <h2 className="text-xl font-bold text-slate-800 tracking-tight">Conteúdo de Suporte</h2>
+          <p className="text-sm text-slate-500">Configure o cabeçalho e canais de contato da página de suporte.</p>
+        </div>
+        <Button 
+          variant="outline" 
+          onClick={() => {
+            setSupportDraft(supportConfig || {
+              header: { 
+                title: "Como podemos ajudar?", 
+                description: "Encontre respostas rápidas para suas dúvidas ou entre em contato com nossa equipe de suporte." 
+              },
+              contactCards: [
+                { id: "email", title: "Email", description: "Respondemos em até 24h úteis.", link: "mailto:suporte@powerlife.com", linkText: "suporte@powerlife.com", color: "blue", icon: "Mail" },
+                { id: "whatsapp", title: "WhatsApp", description: "Atendimento em horário comercial.", link: "https://wa.me/5511999999999", linkText: "(11) 99999-9999", color: "green", icon: "MessageCircle" },
+                { id: "manuais", title: "Manuais", description: "Guias detalhados das ferramentas.", link: "/ajuda/manuais", linkText: "Acessar Guias", color: "purple", icon: "FileText" }
+              ]
+            });
+            setIsEditingSupportConfig(true);
+          }}
+          className="border-blue-200 text-blue-600 hover:bg-blue-50"
+        >
+          <Edit2 className="w-4 h-4 mr-2" />
+          Editar Página de Suporte
+        </Button>
+      </div>
+
+      <div className="flex justify-between items-center pt-4 border-t border-slate-100">
         <div>
           <h2 className="text-xl font-bold text-slate-800">Gestão de FAQ</h2>
           <p className="text-sm text-slate-500">Adicione, remova ou edite as perguntas frequentes exibidas aos usuários.</p>
@@ -881,6 +954,9 @@ function FAQEditor() {
                   <div className="flex items-center justify-between">
                     <Badge variant="outline" className="text-[10px] uppercase tracking-wider">{faq.category}</Badge>
                     <div className="flex items-center gap-2">
+                      <Button variant="ghost" size="icon" onClick={() => { setFaqToEdit(faq); setIsEditFaqOpen(true); }} className="text-slate-500 hover:text-blue-600">
+                        <Edit className="w-4 h-4" />
+                      </Button>
                       <Switch 
                         checked={faq.active} 
                         onCheckedChange={(checked) => mutationToggleFaq.mutate({ id: faq.id, active: checked })} 
@@ -930,6 +1006,377 @@ function FAQEditor() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <Dialog open={isEditFaqOpen} onOpenChange={setIsEditFaqOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar FAQ</DialogTitle>
+          </DialogHeader>
+          {faqToEdit && (
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label>Categoria</Label>
+                <Input value={faqToEdit.category} onChange={e => setFaqToEdit({...faqToEdit, category: e.target.value})} />
+              </div>
+              <div className="space-y-2">
+                <Label>Pergunta</Label>
+                <Input value={faqToEdit.question} onChange={e => setFaqToEdit({...faqToEdit, question: e.target.value})} />
+              </div>
+              <div className="space-y-2">
+                <Label>Resposta</Label>
+                <textarea 
+                  className="w-full min-h-[100px] p-3 rounded-md border border-slate-200 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  value={faqToEdit.answer} 
+                  onChange={e => setFaqToEdit({...faqToEdit, answer: e.target.value})}
+                />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditFaqOpen(false)}>Cancelar</Button>
+            <Button onClick={() => mutationUpdateFaq.mutate({ id: faqToEdit.id, data: { category: faqToEdit.category, question: faqToEdit.question, answer: faqToEdit.answer } })} disabled={mutationUpdateFaq.isPending} className="bg-blue-600 hover:bg-blue-700">
+              {mutationUpdateFaq.isPending ? 'Salvando...' : 'Salvar Alterações'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isEditingSupportConfig} onOpenChange={setIsEditingSupportConfig}>
+        <DialogContent className="max-w-3xl overflow-y-auto max-h-[90vh]">
+          <DialogHeader>
+            <DialogTitle>Configuração da Página de Suporte</DialogTitle>
+          </DialogHeader>
+          {supportDraft && (
+            <div className="space-y-8 py-4">
+              <div className="space-y-4">
+                <h3 className="font-bold text-blue-600 flex items-center gap-2">
+                  <FileText className="w-4 h-4" />
+                  Cabeçalho
+                </h3>
+                <div className="grid grid-cols-1 gap-4 p-4 bg-slate-50 rounded-lg border border-slate-100">
+                  <div className="space-y-2">
+                    <Label>Título</Label>
+                    <Input 
+                      value={supportDraft.header?.title} 
+                      onChange={e => setSupportDraft({...supportDraft, header: {...supportDraft.header, title: e.target.value}})} 
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Descrição</Label>
+                    <textarea 
+                      className="w-full min-h-[80px] p-2 rounded-md border border-slate-200 text-sm"
+                      value={supportDraft.header?.description} 
+                      onChange={e => setSupportDraft({...supportDraft, header: {...supportDraft.header, description: e.target.value}})} 
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <h3 className="font-bold text-green-600 flex items-center gap-2">
+                  <MessageCircle className="w-4 h-4" />
+                  Canais de Contato
+                </h3>
+                <div className="space-y-6">
+                  {supportDraft.contactCards?.map((card: any, idx: number) => (
+                    <div key={idx} className="p-4 border border-slate-200 rounded-xl space-y-4 relative bg-white shadow-sm hover:shadow-md transition-shadow">
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="absolute top-2 right-2 text-red-400 hover:text-red-600 hover:bg-red-50"
+                        onClick={() => {
+                          const cards = [...supportDraft.contactCards];
+                          cards.splice(idx, 1);
+                          setSupportDraft({...supportDraft, contactCards: cards});
+                        }}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>Título do Card</Label>
+                          <Input 
+                            value={card.title} 
+                            onChange={e => {
+                              const cards = [...supportDraft.contactCards];
+                              cards[idx].title = e.target.value;
+                              setSupportDraft({...supportDraft, contactCards: cards});
+                            }} 
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Ícone</Label>
+                          <select 
+                            className="w-full p-2 rounded-md border border-slate-200 text-sm"
+                            value={card.icon}
+                            onChange={e => {
+                              const cards = [...supportDraft.contactCards];
+                              cards[idx].icon = e.target.value;
+                              setSupportDraft({...supportDraft, contactCards: cards});
+                            }}
+                          >
+                            <option value="Mail">Email (Mail)</option>
+                            <option value="MessageCircle">WhatsApp (MessageCircle)</option>
+                            <option value="FileText">Manuais (FileText)</option>
+                            <option value="Activity">Atividade (Activity)</option>
+                            <option value="ExternalLink">Link Externo</option>
+                            <option value="ShieldAlert">Escudo/Segurança</option>
+                          </select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Texto do Link</Label>
+                          <Input 
+                            value={card.linkText} 
+                            onChange={e => {
+                              const cards = [...supportDraft.contactCards];
+                              cards[idx].linkText = e.target.value;
+                              setSupportDraft({...supportDraft, contactCards: cards});
+                            }} 
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Cor (Tailwind name)</Label>
+                          <select 
+                            className="w-full p-2 rounded-md border border-slate-200 text-sm"
+                            value={card.color}
+                            onChange={e => {
+                              const cards = [...supportDraft.contactCards];
+                              cards[idx].color = e.target.value;
+                              setSupportDraft({...supportDraft, contactCards: cards});
+                            }}
+                          >
+                            <option value="blue">Azul</option>
+                            <option value="green">Verde</option>
+                            <option value="purple">Roxo</option>
+                            <option value="orange">Laranja</option>
+                            <option value="red">Vermelho</option>
+                          </select>
+                        </div>
+                        <div className="space-y-2 md:col-span-2">
+                          <Label>Descrição</Label>
+                          <Input 
+                            value={card.description} 
+                            onChange={e => {
+                              const cards = [...supportDraft.contactCards];
+                              cards[idx].description = e.target.value;
+                              setSupportDraft({...supportDraft, contactCards: cards});
+                            }} 
+                          />
+                        </div>
+                        <div className="space-y-2 md:col-span-2">
+                          <Label>Link (URL, mailto: ou rota local)</Label>
+                          <Input 
+                            value={card.link} 
+                            onChange={e => {
+                              const cards = [...supportDraft.contactCards];
+                              cards[idx].link = e.target.value;
+                              setSupportDraft({...supportDraft, contactCards: cards});
+                            }} 
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  <Button 
+                    variant="outline" 
+                    className="w-full border-dashed py-6"
+                    onClick={() => {
+                      const cards = supportDraft.contactCards || [];
+                      setSupportDraft({
+                        ...supportDraft, 
+                        contactCards: [...cards, { id: `card-${Date.now()}`, title: "Novo Canal", description: "Descrição aqui", link: "#", linkText: "Clique aqui", color: "blue", icon: "Mail" }]
+                      });
+                    }}
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Adicionar Novo Card de Contato
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditingSupportConfig(false)}>Cancelar</Button>
+            <Button 
+              onClick={() => mutationUpdateSupport.mutate(supportDraft)} 
+              disabled={mutationUpdateSupport.isPending}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              {mutationUpdateSupport.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
+              Salvar Configurações
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+function SystemConfigTab() {
+  const { user, isAdmin } = useAuth();
+  
+  const { data: health, isLoading } = useQuery<any>({
+    queryKey: ['system-health-detailed'],
+    queryFn: async () => {
+      const token = await user?.getIdToken();
+      const response = await fetch('/api/admin/health', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (!response.ok) throw new Error('Failed to fetch health');
+      return response.json();
+    },
+    enabled: !!user && isAdmin
+  });
+
+  if (isLoading) return <TableSkeleton />;
+
+  const featureItems = [
+    { id: 'firebase', name: 'Firebase Firestore', description: 'Banco de dados central e persistência de dados.', env: 'FIREBASE_SERVICE_ACCOUNT_KEY / ADC' },
+    { id: 'gemini', name: 'Gemini AI', description: 'Geração de relatórios automáticos com inteligência artificial.', env: 'GEMINI_API_KEY' },
+    { id: 'resend', name: 'Resend (E-mail)', description: 'Envio de convites, lembretes e notificações por e-mail.', env: 'RESEND_API_KEY' },
+    { id: 'stripe', name: 'Stripe', description: 'Processamento de pagamentos globais e assinaturas recorrentes.', env: 'STRIPE_SECRET_KEY' },
+    { id: 'mercadopago', name: 'Mercado Pago', description: 'Gateway de pagamento brasileiro (Pix e cartões).', env: 'MERCADOPAGO_ACCESS_TOKEN' },
+    { id: 'googleOAuth', name: 'Google OAuth & Calendar', description: 'Sincronização de sessões e tarefas com a agenda do Google.', env: 'GOOGLE_CLIENT_ID / SECRET' },
+  ];
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h2 className="text-xl font-bold text-slate-800">Diagnóstico de Integrações</h2>
+          <p className="text-sm text-slate-500">Monitoramento em tempo real dos serviços externos e chaves de API.</p>
+        </div>
+        <Badge variant="outline" className="bg-blue-50 text-blue-700 flex gap-2 items-center px-3 py-1">
+          <Activity className="w-3 h-3" />
+          Live Status
+        </Badge>
+      </div>
+
+      <div className="grid gap-4">
+        {featureItems.map((item) => {
+          const status = health?.[item.id];
+          const isEnabled = item.id === 'firebase' ? (status?.status === 'ok' || status?.status === 'warning') : status?.enabled;
+          const statusMessage = status?.message || (isEnabled ? 'Configurado e pronto' : 'Não configurado');
+          
+          return (
+            <Card key={item.id} className="bg-white border-slate-200 group hover:border-blue-200 transition-all">
+              <CardContent className="p-6 flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className={`p-3 rounded-full transition-colors ${
+                    isEnabled ? 'bg-green-50 text-green-600' : 'bg-slate-50 text-slate-400'
+                  }`}>
+                    {isEnabled ? <CheckCircle2 className="w-6 h-6" /> : <AlertCircle className="w-6 h-6" />}
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-bold text-slate-800">{item.name}</h3>
+                      {item.id === 'firebase' && status?.status === 'warning' && (
+                        <Badge className="bg-orange-100 text-orange-700 text-[10px]">Fallback Activo</Badge>
+                      )}
+                    </div>
+                    <p className="text-sm text-slate-500 mb-1">{item.description}</p>
+                    <div className="flex items-center gap-2">
+                      <code className="text-[10px] bg-slate-50 px-2 py-0.5 rounded border border-slate-100 font-mono text-slate-500">
+                        {item.env}
+                      </code>
+                      <span className="text-[10px] text-slate-400">•</span>
+                      <span className={cn(
+                        "text-[10px] font-medium",
+                        isEnabled ? "text-green-600" : "text-slate-400"
+                      )}>
+                        {statusMessage}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <Badge className={cn(
+                    "shadow-none border",
+                    isEnabled 
+                      ? 'bg-green-100 text-green-700 border-green-200' 
+                      : 'bg-slate-100 text-slate-500 border-slate-200'
+                  )}>
+                    {isEnabled ? 'Ativo' : 'Indisponível'}
+                  </Badge>
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
+
+      <div className="p-4 bg-blue-50 border border-blue-100 rounded-xl flex gap-3">
+        <Key className="w-5 h-5 text-blue-600 shrink-0" />
+        <div className="text-sm text-blue-700">
+          <p className="font-bold mb-1">Como configurar?</p>
+          <p>Para ativar recursos pendentes, acesse o painel lateral no <strong>AI Studio</strong>, clique em <strong>Secrets</strong> e adicione as variáveis de ambiente mencionadas acima. Os recursos serão ativados automaticamente após a atualização.</p>
+        </div>
+      </div>
+
+      <Card className="bg-white border-slate-200">
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Mail className="w-5 h-5 text-blue-600" />
+            Suporte e Testes de E-mail
+          </CardTitle>
+          <CardDescription>Verifique se o serviço Resend está operando e envie e-mails de teste.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex flex-col sm:flex-row gap-4">
+             <div className="flex-1 space-y-2">
+                <Label>E-mail do Destinatário</Label>
+                <Input 
+                  placeholder="exemplo@gmail.com" 
+                  value={(health as any)?.testEmail || ''} 
+                  onChange={(e) => {
+                    // This is local state for testing, we use setAbaAtiva or a local state
+                  }}
+                  id="test-email-input"
+                />
+             </div>
+             <div className="flex items-end">
+                <Button 
+                  onClick={async () => {
+                    const email = (document.getElementById('test-email-input') as HTMLInputElement)?.value;
+                    if (!email) return toast.error('Digite um e-mail de teste');
+                    
+                    try {
+                      const token = await user?.getIdToken();
+                      const res = await fetch('/api/notifications/test-email', {
+                        method: 'POST',
+                        headers: { 
+                          'Content-Type': 'application/json',
+                          'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify({
+                          to: email,
+                          subject: "Teste de Integração PowerLife",
+                          body: "<h1>Sucesso!</h1><p>A integração com o Resend está funcionando corretamente no seu ambiente.</p>"
+                        })
+                      });
+                      if (res.ok) toast.success('E-mail de teste enviado com sucesso!');
+                      else toast.error('Falha ao enviar e-mail de teste');
+                    } catch (e) {
+                      toast.error('Erro na requisição');
+                    }
+                  }}
+                  className="bg-blue-600 hover:bg-blue-700"
+                  disabled={!health?.resend?.enabled}
+                >
+                  Enviar Teste
+                </Button>
+             </div>
+          </div>
+          {!health?.resend?.enabled && (
+            <p className="text-xs text-amber-600 font-medium flex items-center gap-1">
+              <AlertCircle className="w-3 h-3" />
+              O serviço de e-mail está inativo. Configure a RESEND_API_KEY para habilitar.
+            </p>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

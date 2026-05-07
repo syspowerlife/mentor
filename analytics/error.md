@@ -1,31 +1,35 @@
-# Relatório de Análise de Erros do Sistema
-**Data e Hora de Geração:** 2026-04-23 12:43:36 UTC
+# Relatório de Análise e Erros do Sistema - PowerLife
+**Gerado em:** 28/04/2026 09:21:00 (Horário de Brasília)
 
-## 1. Inconsistência Crítica de Validação (Firestore Rules vs. Server)
-- **Local:** `firestore.rules` (Linha 149) e `server.ts` (Linha 1081).
-- **Erro:** O enum de status para a coleção `metas_smart` nas regras do Firestore não inclui o valor `'pendente'`, mas o servidor tenta processar e atualizar documentos com esse status.
-- **Impacto:** Documentos com status `'pendente'` sofrerão `PERMISSION_DENIED` em qualquer tentativa de atualização via cliente ou SDK (se não for admin bypass as planejado), impedindo o funcionamento correto do cron de notificações.
+## 1. Falhas Críticas de Permissão no Firestore (Security Rules)
+O sistema apresenta múltiplos erros de `permission-denied` em operações de listagem e leitura, impactando diretamente o Portal do Cliente e o Painel do Profissional.
 
-## 2. Vulnerabilidade na Verificação de Webhook (Stripe)
-- **Local:** `server.ts` (Linha 183).
-- **Erro:** Utilização de `JSON.stringify(req.body)` para reconstrução do payload do webhook.
-- **Impacto:** A verificação de assinatura do Stripe quase certamente falhará, pois o `JSON.stringify` não garante a reprodução exata (bit-a-bit) do buffer original recebido. Isso fará com que pagamentos não sejam processados automaticamente no sistema.
+- **Causa Raiz:** A função central de validação de listagem `canListResource` (Linhas 92-101 de `firestore.rules`) é excessivamente restritiva. Ela não contempla campos relacionais fundamentais como `cliente_id`, nem campos específicos de coleções como `uploadedBy` (anexos) ou `author_id` (feedbacks).
+- **Impacto:** Clientes não conseguem visualizar suas próprias Metas SMART, Agendamentos ou Anexos quando estes são criados pelo profissional, pois o sistema tenta validar apenas o `created_by` ou campos de UID específicos que nem sempre estão presentes ou mapeados corretamente.
+- **Coleções Afetadas:** `metas_smart`, `agendamentos`, `clientes/{id}/anexos`, `clientes/{id}/professional_notes`.
 
-## 3. Credenciais de Superadmin Hardcoded
-- **Local:** `server.ts` (Linha 87) e `firestore.rules` (Linha 89).
-- **Erro:** O e-mail `sys.powerlife@gmail.com` está definido estatiticamente como administrador total.
-- **Impacto:** Risco de segurança e falta de flexibilidade. Se este e-mail for alterado ou a conta comprometida, o sistema fica vulnerável ou inacessível para gerenciamento sem alteração de código.
+## 2. Instabilidade com Persistência Offline
+Foram detectados erros críticos de asserção interna do Firebase Firestore (`INTERNAL ASSERTION FAILED: Unexpected state (ID: b815)`).
 
-## 4. Potencial de Exaustão de Recursos (Denial of Wallet)
-- **Local:** `firestore.rules` (Função `isClientOf` na Linha 81).
-- **Erro:** Uso de `get()` dentro de funções de permissão que são chamadas em operações de lista (`read`).
-- **Impacto:** Cada documento retornado em uma lista pode gerar leituras adicionais no Firestore, aumentando drasticamente o custo da conta e reduzindo a performance das consultas.
+- **Estado Atual:** A persistência offline via `enableIndexedDbPersistence` foi desativada temporariamente no arquivo `src/lib/firebase.ts` como medida paliativa.
+- **Impacto:** O aplicativo perde a capacidade de funcionar em modo offline ou redes instáveis, mas a desativação foi necessária para evitar o crash completo da interface em certos navegadores.
 
-## 5. Inconsistência no Enum de Agendamentos
-- **Local:** `firestore.rules` (Linha 222) vs Realidade de Uso.
-- **Erro:** O enum de status permite `'concluido'`, mas o sistema de metas usa `'concluida'`. Embora pareça menor, inconsistências de gênero em enums causam falhas silenciosas de validação.
+## 3. Vulnerabilidade na Integração com Stripe
+O servidor (`server.ts`) utiliza uma abordagem insegura para verificar assinaturas de webhooks do Stripe.
 
-## 6. Dependência de Variáveis de Ambiente Não Verificadas
-- **Local:** `server.ts`.
-- **Erro:** Diversas integrações (Resend, Stripe, Mercado Pago) inicializam clientes mesmo se as chaves estiverem ausentes, o que pode causar erros em tempo de execução quando as rotas forem acessadas.
-- **Impacto:** Falhas inesperadas (Null Pointer Exceptions) ao tentar acessar funcionalidades pagas ou de comunicação se o ambiente não estiver perfeitamente configurado.
+- **Erro:** Uso de `JSON.stringify(req.body)` para reconstruir o payload original na verificação de assinatura (Linha 335 de `server.ts`).
+- **Problema:** O Stripe exige o corpo "raw" (bruto) para a verificação. O `JSON.stringify` altera a ordem dos campos ou espaços, invalidando a assinatura e impedindo que o sistema processe renovações de assinatura ou confirmações de pagamento via webhook de forma confiável.
+
+## 4. Inconsistências de Tipagem e Enums (Regras vs. Código)
+Existe uma divergência entre as strings permitidas nas `firestore.rules` e os valores utilizados no frontend/backend.
+
+- **Exemplo:** Enums de status como `concluido` vs `concluida`. Em sistemas de gestão de metas, discrepâncias de gênero em strings de status causam falhas silenciosas onde a regra bloqueia a escrita por não reconhecer o valor enviado pelo frontend.
+- **Impacto:** Dificuldade de depuração e bloqueios inesperados em fluxos de conclusão de metas e tarefas.
+
+## 5. Fragilidade no Ambiente de Build
+O sistema de build apresentou falhas recorrentes por ausência do binário `vite`, indicando que as dependências do `package.json` não são instaladas automaticamente em todas as transições de ambiente.
+
+- **Impacto:** Interrupção do fluxo de desenvolvimento e necessidade de intervenção manual para rodar `npm install`.
+
+## 6. Gestão de Identidade Superadmin
+Embora a verificação de admin tenha sido melhorada, o sistema ainda carece de uma gestão centralizada e robusta de papéis, alternando entre checagens na coleção `admins` e no campo `role: 'admin'` da coleção `users`, o que pode gerar inconsistências de acesso caso um dos locais não seja atualizado simultaneamente.

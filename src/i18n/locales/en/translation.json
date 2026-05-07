@@ -8,9 +8,14 @@
     "search": "Search",
     "actions": "Actions",
     "notifications": "Notifications",
+    "date_format_long": "MMMM do",
+    "error_loading_data": "Error loading data",
+    "error_saving_data": "Error saving data",
     "profile": "Profile",
     "settings": "Settings",
-    "logout": "Logout"
+    "logout": "Logout",
+    "of": "of",
+    "processing": "Processing..."
   },
   "menu": {
     "dashboard": "Dashboard",
@@ -25,7 +30,7 @@
     "diary": "Reflection Diary",
     "progress": "Progress",
     "evaluation": "Session Evaluation",
-    "appointments": "Appointments",
+    "appointments": "Schedules",
     "my_evaluations": "My Evaluations",
     "support": "Support",
     "manuals": "Manuals",
@@ -64,13 +69,15 @@
       "creating": "Creating...",
       "create_btn": "Create IDP",
       "errors": {
-        "select_collaborator": "Please select a collaborator",
-        "select_manager": "Please select a manager",
-        "fill_dates": "Please fill in the dates",
+        "select_collaborator": "Select a collaborator",
+        "select_manager": "Select a manager",
+        "fill_dates": "Fill all dates",
         "create_error": "Error creating IDP.",
         "delete_error": "Error deleting IDP",
-        "meta_linked": "Cannot delete an IDP that has linked goals. Remove goals first.",
-        "feedback_linked": "Cannot delete an IDP that has registered feedbacks."
+        "meta_linked": "Cannot delete an IDP with linked goals. Remove goals first.",
+        "feedback_linked": "Cannot delete an IDP with registered feedbacks.",
+        "acao_linked": "Cannot delete an IDP with linked actions.",
+        "update_error": "Error updating IDP."
       },
       "success": {
         "created": "IDP created successfully!",
@@ -104,8 +111,8 @@
         "engagement": "Recent Engagement"
       },
       "progress": {
-        "title": "Overall Progress",
-        "completed_actions": "Of completed actions"
+        "title": "General Progress",
+        "completed_actions": "Completed actions"
       },
       "gamification": {
         "title": "Gamification and Evolution",
@@ -120,7 +127,9 @@
         "action_plan": "Action Plan",
         "add_action": "Add Action",
         "no_actions": "No actions registered.",
-        "deadline": "Deadline"
+        "deadline": "Deadline",
+        "meta_success": "Goal created successfully!",
+        "action_success": "Action added successfully!"
       },
       "competencies_tab": {
         "title": "Competencies in Development",
@@ -131,11 +140,13 @@
         "soft_skill": "Soft Skill",
         "hard_skill": "Hard Skill",
         "current_level": "Current Level",
-        "target_level": "Target"
+        "target_level": "Target",
+        "add_success": "Competency linked successfully!"
       },
       "feedbacks_tab": {
         "title": "Continuous Feedbacks",
-        "new": "New Feedback"
+        "new": "New Feedback",
+        "success": "Feedback recorded successfully!"
       },
       "reports_tab": {
         "title": "IDP Reports",
@@ -186,8 +197,8 @@
       "modal": {
         "approve_title": "Approve IDP",
         "adjust_title": "Request Adjustments",
-        "approve_desc": "By approving, the IDP will become active for the collaborator.",
-        "adjust_desc": "Explain what adjustments are needed so the collaborator can revise the plan.",
+        "approve_desc": "Upon approval, the IDP will become active for the collaborator.",
+        "adjust_desc": "Explain what adjustments are needed so the collaborator can review the plan.",
         "comment_placeholder": "Add a comment (optional for approval, recommended for adjustments)...",
         "confirm_approve": "Confirm Approval",
         "confirm_adjust": "Send Request"
@@ -196,7 +207,7 @@
         "approve_title": "IDP Approved!",
         "adjust_title": "IDP Adjustments Requested",
         "approve_msg": "Your Individual Development Plan has been approved and is now active.",
-        "adjust_msg": "Your manager requested some adjustments to your IDP. Check the details.",
+        "adjust_msg": "Your manager has requested some adjustments to your IDP. Check the details.",
         "approve_feedback": "IDP Approved. {{comment}}",
         "adjust_feedback": "Adjustments requested: {{comment}}"
       },
@@ -214,6 +225,637 @@
       "roda_avg": "Wheel of Life Avg",
       "metas_completed": "Completed Goals",
       "growth": "Growth Rate"
+    }
+  },
+  "errors": {
+    "firebase": {
+      "auth/invalid-email": "Invalid email address.",
+      "auth/user-disabled": "This account has been disabled.",
+      "auth/user-not-found": "User not found.",
+      "auth/wrong-password": "Incorrect password.",
+      "auth/email-already-in-use": "This email is already in use.",
+      "auth/weak-password": "The password is too weak. Use at least 6 characters.",
+      "auth/network-request-failed": "Connection failure. Check your internet.",
+      "auth/too-many-requests": "Too many login attempts. Try again later.",
+      "auth/invalid-credential": "Invalid credentials.",
+      "permission-denied": "You don't have permission to perform this action.",
+      "not-found": "The requested document was not found.",
+      "already-exists": "This document already exists.",
+      "resource-exhausted": "Usage limit exceeded. Try again later.",
+      "unavailable": "The service is currently unavailable.",
+      "unauthenticated": "You need to be logged in to perform this action.",
+      "default": "An unexpected error occurred. Try again."
+    }
+  },
+  "roda": {
+    "title": "Wheel of Life",
+    "new_assessment": "New Assessment",
+    "history": "Recent History",
+    "visualization": "Visualization",
+    "save_btn": "Save Assessment",
+    "saving": "Saving...",
+    "types": {
+      "atual": "Current State",
+      "desejado": "Desired State"
+    },
+    "labels": {
+      "saude_fisica": "Physical Health",
+      "desenvolvimento_mental": "Mental Development",
+      "inteligencia_emocional": "Emotional Intelligence",
+      "familia": "Family",
+      "romance": "Romance",
+      "vida_social": "Social Life",
+      "carreira": "Career",
+      "financas": "Finances",
+      "contribuicao_social": "Social Contribution",
+      "divertimento_lazer": "Fun/Leisure",
+      "saude_ambiente": "Environment Health"
+    },
+    "success": {
+      "saved": "Assessment saved successfully!"
+    },
+    "errors": {
+      "not_found": "Assessment not found.",
+      "fill_title": "Please fill in the title."
+    }
+  },
+  "swot": {
+    "title": "SWOT Analysis",
+    "save_btn": "Save Analysis",
+    "saving": "Saving...",
+    "title_label": "Analysis Title",
+    "title_placeholder": "Ex: Career Analysis 2026",
+    "action_plan_title": "Action Plan",
+    "action_plan_placeholder": "Describe actions to be taken based on this analysis...",
+    "sections": {
+      "strengths": "Strengths",
+      "weaknesses": "Weaknesses",
+      "opportunities": "Opportunities",
+      "threats": "Threats"
+    },
+    "placeholders": {
+      "add_strength": "Add strength...",
+      "add_weakness": "Add weakness...",
+      "add_opportunity": "Add opportunity...",
+      "add_threat": "Add threat..."
+    },
+    "success": {
+      "saved": "SWOT Analysis saved successfully!"
+    },
+    "errors": {
+      "not_found": "SWOT Analysis not found.",
+      "fill_title": "Please fill in the analysis title."
+    }
+  },
+  "smart": {
+    "title": "SMART Goals",
+    "subtitle": "Track your goals through the Kanban board.",
+    "new_goal": "New Goal",
+    "kanban": {
+      "to_do": "To Do",
+      "in_progress": "In Progress",
+      "completed": "Completed",
+      "paused": "Paused",
+      "pending": "Pending"
+    },
+    "form": {
+      "create_title": "Create New SMART Goal",
+      "edit_title": "Edit SMART Goal",
+      "title_label": "Goal Title",
+      "title_placeholder": "Ex: Increase revenue by 20%",
+      "s": "S - Specific",
+      "m": "M - Measurable",
+      "a": "A - Achievable",
+      "r": "R - Relevant",
+      "t": "T - Time-bound",
+      "deadline": "Deadline",
+      "status": "Status",
+      "save": "Save Goal",
+      "saving": "Saving..."
+    },
+    "success": {
+      "created": "Goal created successfully!",
+      "updated": "Goal updated!",
+      "deleted": "Goal deleted!"
+    },
+    "notifications": {
+      "new_title": "New SMART Goal",
+      "new_msg": "Goal \"{{titulo}}\" was defined successfully.",
+      "completed_title": "Goal Completed! 🎉",
+      "completed_msg": "Congratulations on hitting your target. Keep that focus!"
+    }
+  },
+  "progress": {
+    "title": "Progress Tracking",
+    "description": "Visualize the evolution of indicators and goals over time.",
+    "filters": {
+      "last_6_months": "Last 6 months"
+    },
+    "sessions": {
+      "register_btn": "Register Session",
+      "history_title": "Session History and Notes",
+      "empty": "No sessions registered for this period.",
+      "no_notes": "No notes registered.",
+      "edit_title": "Edit Session",
+      "new_title": "Register New Session",
+      "desc": "Record the main points and perceived progress in this session.",
+      "form": {
+        "title": "Session Title",
+        "date": "Date",
+        "related_goals": "Related Goals",
+        "perceived_progress": "Perceived Progress (0-10)",
+        "notes": "Notes and Observations",
+        "title_placeholder": "Ex: Session 05 - Focus on Career",
+        "deadline": "Deadline: ",
+        "notes_placeholder": "What was discussed? What are the next steps?",
+        "saving": "Saving...",
+        "save_btn": "Save Session"
+      },
+      "success": {
+        "updated": "Session updated!",
+        "registered": "Session registered!",
+        "deleted": "Session deleted."
+      }
+    },
+    "stats": {
+      "roda_avg": "Wheel of Life Average (Current)",
+      "vs_previous": "vs previous",
+      "metas_completed": "Goals Completed (Total)",
+      "accumulated": "accumulated in period",
+      "growth_rate": "Growth Rate",
+      "based_on_roda": "based on Wheel of Life"
+    },
+    "charts": {
+      "longitudinal": "Longitudinal Evolution",
+      "indicators_desc": "Crossing well-being and productivity indicators",
+      "roda_vida": "Wheel of Life",
+      "humor_diario": "Mood (Daily)",
+      "progresso_sessao": "Session Progress",
+      "deliveries_volume": "Monthly volume of deliveries",
+      "metas": "Goals",
+      "global_avg": "Global Average"
+    }
+  },
+  "evaluation": {
+    "title": "Session Evaluation",
+    "description": "Leave your feedback on the last mentoring session.",
+    "form": {
+      "title": "Feedback Form",
+      "subtitle": "Your opinion helps us better direct future meetings.",
+      "question_rating": "How do you rate today's session?",
+      "rating_labels": {
+        "1": "Poor",
+        "2": "Fair",
+        "3": "Good",
+        "4": "Very Good",
+        "5": "Excellent"
+      },
+      "valuable_label": "What was most valuable in today's session?",
+      "valuable_placeholder": "Describe the highlights, insights, or learnings...",
+      "improvement_label": "What could be improved for future sessions?",
+      "improvement_placeholder": "Suggestions, unanswered questions, or topics you'd like to delve deeper into...",
+      "submit_btn": "Send Evaluation",
+      "submitting": "Sending...",
+      "new_btn": "Send New Evaluation"
+    },
+    "success": {
+      "title": "Evaluation Sent!",
+      "message": "Thank you very much for your feedback. It is essential for us to continue improving our process.",
+      "toast": "Feedback sent successfully!"
+    },
+    "errors": {
+      "not_found": "Evaluation not found.",
+      "login_required": "You must be logged in to evaluate.",
+      "missing_mentor": "Mentor ID not identified.",
+      "invalid_link": "Invalid evaluation link (mentorId missing).",
+      "select_rating": "Please select a rating for the session.",
+      "submit_error": "Error sending evaluation."
+    },
+    "invalid_link": {
+      "title": "Invalid Link",
+      "message": "This evaluation link does not contain the necessary information. Please request a new link from your mentor."
+    },
+    "notifications": {
+      "new_title": "New Feedback Received",
+      "new_msg": "{{name}} sent an evaluation about the session."
+    }
+  },
+  "dossier": {
+    "title": "Consolidated Dossier",
+    "subtitle": "Integrative evaluation report",
+    "export_pdf": "Export PDF",
+    "generating": "Generating...",
+    "cover": {
+      "journey_of": "Journey of",
+      "subtitle": "Integrative report of behavioral assessments, strategic tools, and goal planning.",
+      "mentor_label": "Responsible Mentor",
+      "default_mentor": "PowerLife Professional"
+    },
+    "roda": {
+      "title": "Diagnosis: Wheel of Life",
+      "quote": "\"Balance is not something you find, it's something you create.\" The Wheel of Life represents current satisfaction in 11 fundamental areas of being.",
+      "leverage_points": {
+        "title": "Leverage Points",
+        "desc": "Areas with the greatest impact on the system if worked on prioritarily."
+      },
+      "critical_areas": {
+        "title": "Critical Areas",
+        "desc": "Satisfaction levels below 4 that need immediate intervention."
+      }
+    },
+    "behavior": {
+      "title": "Behavioral Profile",
+      "disc_title": "DISC Methodology",
+      "disc_desc": "Representation of behavior trends in four quadrants.",
+      "values_title": "Personal Values",
+      "values_empty": "Values not defined",
+      "ia_comments_title": "Behavioral Intelligence Comments",
+      "ia_comments_template": "The client presents a predominant profile in <0>{{profileName}}</0>, which suggests a search for results and efficiency. Their values of <1>{{values}}</1> serve as a compass for decision making."
+    },
+    "swot": {
+      "title": "Strategic Matrix (SWOT)",
+      "empty": "Not filled"
+    },
+    "action": {
+      "title": "Action: SMART Goals and IDP",
+      "active_goals": "Active Goals",
+      "pdi_title": "Individual Development Plan (IDP)",
+      "pdi_desc": "The complete IDP was detailed and is in continuous monitoring in the PowerLife system. <br /> <strong>{{count}} strategic actions</strong> were mapped for this cycle."
+    },
+    "footer": {
+      "end": "End of Report",
+      "system": "PowerLife Mentoring System"
+    }
+  },
+  "diary": {
+    "title": "Reflection Diary",
+    "description": "Record your daily thoughts, learnings, and feelings.",
+    "new_entry": {
+      "title": "New Reflection",
+      "question": "How are you feeling today?",
+      "mind_label": "What's on your mind?",
+      "mind_placeholder": "Write about your achievements, challenges, or thoughts of the day...",
+      "privacy": {
+        "label": "Privacy",
+        "private_desc": "Only you can see this record.",
+        "shared_desc": "Your mentor will be able to view this reflection.",
+        "private": "Private",
+        "shared": "Shared"
+      },
+      "save_btn": "Save Reflection",
+      "saving": "Saving..."
+    },
+    "history": {
+      "title": "History",
+      "loading": "Loading history...",
+      "empty": "No reflection recorded yet. Start writing above!"
+    },
+    "sentiments": {
+      "happy": "Happy",
+      "neutral": "Neutral",
+      "sad": "Sad"
+    },
+    "success": {
+      "toast": "Reflection saved successfully!"
+    },
+    "errors": {
+      "not_found": "Reflection not found.",
+      "empty_content": "Write something before saving.",
+      "save_error": "Error saving reflection."
+    }
+  },
+  "disc": {
+    "title": "DISC Profile",
+    "history": "Assessment History",
+    "report_ia": "AI Report",
+    "view_summary": "View Summary",
+    "new_assessment": "Start New Assessment",
+    "full_report": "Generate Full Professional Report",
+    "form": {
+      "title": "Assessment Questionnaire",
+      "description": "Evaluate each statement from 0 (Strongly Disagree) to 10 (Strongly Agree).",
+      "title_label": "Assessment Title",
+      "title_placeholder": "Ex: DISC Assessment 2026",
+      "calculate": "Calculate Result",
+      "calculating": "Calculating..."
+    },
+    "results": {
+      "dominant": "Your Dominant Profile",
+      "performed_at": "Performed on",
+      "description": "Profile Description"
+    },
+    "labels": {
+      "d": "D - Dominance",
+      "i": "I - Influence",
+      "s": "S - Steadiness",
+      "c": "C - Conscientiousness"
+    },
+    "pdf": {
+      "download": "Download Saved PDF",
+      "generate_save": "Generate and Save PDF",
+      "persist_success": "PDF Report permanently saved!",
+      "persist_error": "Error saving PDF on server.",
+      "persisted_title": "Persisted PDF Report",
+      "persisted_desc": "A full copy of this analysis is saved in the system.",
+      "open": "Open PDF",
+      "save_now": "Generate and Save Now",
+      "save_desc": "Generate PDF to ensure this analysis is permanently saved as a document."
+    },
+    "success": {
+      "saved": "DISC assessment saved successfully!"
+    },
+    "errors": {
+      "not_found": "DISC assessment not found.",
+      "fill_title": "Please fill in the assessment title."
+    }
+  },
+  "values": {
+    "title": "Personal Values",
+    "form": {
+      "title": "Values Identification",
+      "title_label": "Assessment Title",
+      "title_placeholder": "Ex: My Values 2026",
+      "step1_desc": "Select up to 10 most important values for you:",
+      "step2_desc": "For each selected value, evaluate from 1 to 10 its importance in your life and how much you feel you are currently practicing it.",
+      "importance_label": "Importance",
+      "practice_label": "How much I am practicing",
+      "reflections": "Reflections",
+      "reflections_placeholder": "What do you notice when comparing the importance of your values with their practice?",
+      "next": "Next Step",
+      "back": "Back",
+      "save": "Save Assessment",
+      "saving": "Saving...",
+      "new_assessment": "New Assessment"
+    },
+    "success": {
+      "saved": "Values assessment saved successfully!"
+    },
+    "errors": {
+      "not_found": "Values assessment not found.",
+      "fill_title": "Please fill in the assessment title.",
+      "max_reached": "Select maximum 10 values."
+    },
+    "list": {
+      "honesty": "Honesty",
+      "freedom": "Freedom",
+      "family": "Family",
+      "health": "Health",
+      "success": "Success",
+      "peace": "Peace",
+      "love": "Love",
+      "respect": "Respect",
+      "security": "Security",
+      "adventure": "Adventure",
+      "creativity": "Creativity",
+      "justice": "Justice",
+      "wisdom": "Wisdom",
+      "loyalty": "Loyalty",
+      "growth": "Growth",
+      "joy": "Joy",
+      "friendship": "Friendship",
+      "autonomy": "Autonomy",
+      "beauty": "Beauty",
+      "compassion": "Compassion",
+      "competence": "Competence",
+      "knowledge": "Knowledge",
+      "courage": "Courage",
+      "determination": "Determination",
+      "equity": "Equity",
+      "spirituality": "Spirituality",
+      "stability": "Stability",
+      "excellence": "Excellence",
+      "fame": "Fame",
+      "faith": "Faith",
+      "generosity": "Generosity",
+      "harmony": "Harmony",
+      "humility": "Humility",
+      "independence": "Independence",
+      "innovation": "Innovation",
+      "integrity": "Integrity",
+      "leadership": "Leadership",
+      "power": "Power",
+      "recognition": "Recognition",
+      "responsibility": "Responsibility",
+      "wealth": "Wealth",
+      "tradition": "Tradition",
+      "teamwork": "Teamwork",
+      "truth": "Truth"
+    }
+  },
+  "portal": {
+    "login": {
+      "welcome_success": "Welcome to your Portal!",
+      "mentor_account_error": "This account belongs to a mentor. Please use mentor login.",
+      "activated_success": "Portal activated successfully!",
+      "unauthorized": "Unauthorized access. Please contact your mentor.",
+      "access_not_enabled": "Your mentor has not yet enabled your portal access.",
+      "signup_success": "Account created successfully!",
+      "login_desc": "Access your progress and track your goals",
+      "signup_desc": "Create your account to access the portal",
+      "full_name": "Full Name",
+      "name_placeholder": "Your name",
+      "email": "Email",
+      "email_placeholder": "your@email.com",
+      "password": "Password",
+      "login_btn": "Login to Portal",
+      "signup_btn": "Create Account",
+      "no_account": "Don't have an account? Sign up",
+      "has_account": "Already have an account? Login here"
+    },
+    "dashboard": {
+      "title": "Mentee Portal",
+      "mentee": "Mentee",
+      "welcome": "Hello, {{name}}! 👋",
+      "welcome_desc": "Welcome to your coaching portal. Here you can track your progress, view your goals, and manage your appointments.",
+      "unlinked": {
+        "title": "Access Not Linked",
+        "description": "We didn't find a mentee profile linked to this email.",
+        "logout": "Log out and try another email"
+      },
+      "smart_goals": {
+        "title": "Your SMART Goals",
+        "description": "Track what you defined with your mentor",
+        "completed": "Completed",
+        "general_progress": "General Progress",
+        "no_metas": "No goals registered yet."
+      },
+      "evaluations": {
+        "title": "Evaluations",
+        "description": "Answer your forms"
+      },
+      "messages": {
+        "title": "Messages",
+        "description": "Talk to your mentor",
+        "chat_title": "Conversation with your Mentor",
+        "async": "Async",
+        "search_placeholder": "Search conversation...",
+        "no_results": "No messages found for your search.",
+        "start_chat": "Start the conversation with your mentor by sending a message below.",
+        "read": "Read",
+        "sent": "Sent",
+        "input_placeholder": "Type your message here...",
+        "notification_info": "Your mentor will be notified and will respond as soon as possible.",
+        "error_sending": "Error sending message: "
+      },
+      "mentor": {
+        "title": "Your Mentor",
+        "description": "Tracking your journey",
+        "go_to_messages": "Go to Messages"
+      }
+    },
+    "sessions": {
+      "title": "Your Appointments",
+      "next_sessions": "Next Sessions",
+      "no_sessions_future": "No future sessions scheduled.",
+      "history": "Session History",
+      "no_sessions_history": "No session history found.",
+      "confirmed": "Confirmed",
+      "meeting_link": "Meeting Link",
+      "join_session": "Join Session"
+    },
+    "evolution": {
+      "title": "Your Evolution",
+      "completed_goals": "Completed Goals",
+      "current_average": "Current Average (Wheel of Life)",
+      "history_title": "Balance Evolution (History)",
+      "history_desc": "Track the growth of your general Wheel of Life average across assessments.",
+      "radar_title": "Life Balance",
+      "radar_desc": "Latest detailed Wheel of Life result",
+      "disc_title": "Behavioral Profile",
+      "disc_desc": "Your predominant profile (DISC)",
+      "no_roda_history": "The evolution chart will appear after your second Wheel of Life assessment.",
+      "no_roda_data": "No Wheel of Life assessment performed yet.",
+      "no_disc_data": "DISC profile not yet evaluated.",
+      "avg_global": "Global Average"
+    },
+    "evaluations": {
+      "title": "Evaluations",
+      "back": "Back to Home",
+      "choose_tool": "Choose a Tool",
+      "choose_tool_desc": "Select the evaluation you want to perform now.",
+      "roda": {
+        "name": "Wheel of Life",
+        "description": "Evaluate the balance of different areas of your life",
+        "form_title": "Assess your current moment",
+        "form_desc": "Rate each area of your life from 0 to 10.",
+        "save_success": "Wheel of Life saved successfully!",
+        "save_error": "Error saving evaluation.",
+        "areas": {
+          "saude_fisica": "Physical Health",
+          "desenvolvimento_mental": "Mental Development",
+          "inteligencia_emocional": "Emotional Intelligence",
+          "familia": "Family",
+          "romance": "Romance",
+          "vida_social": "Social Life",
+          "carreira": "Career",
+          "financas": "Finances",
+          "contribuicao_social": "Social Contribution",
+          "divertimento_lazer": "Fun/Leisure",
+          "saude_ambiente": "Environment Health"
+        }
+      },
+      "swot": {
+        "title": "SWOT Analysis",
+        "description": "Fill in the quadrants below. Separate each item using a new line (Enter).",
+        "strengths_title": "Strengths (Internal Factors)",
+        "strengths_desc": "What do you do well? What are your talents, advantages, and differentiators?",
+        "strengths_placeholder": "Ex: Good communication\nResilience",
+        "weaknesses_title": "Weaknesses (Internal Factors)",
+        "weaknesses_desc": "What needs improving? What skills or resources are lacking?",
+        "weaknesses_placeholder": "Ex: Lack of English fluency\nDisorganization with schedules",
+        "opportunities_title": "Opportunities (External Factors)",
+        "opportunities_desc": "What scenarios, trends, or contacts can you use to your advantage?",
+        "opportunities_placeholder": "Ex: Expanding market\nPossibility of promotion",
+        "threats_title": "Threats (External Factors)",
+        "threats_desc": "What obstacles, competitors, or changes could harm your goal?",
+        "threats_placeholder": "Ex: Economic crisis\nNew competitors in the market",
+        "save_success": "SWOT Analysis saved successfully!",
+        "save_error": "Error saving SWOT Analysis."
+      },
+      "disc": {
+        "title": "DISC Behavioral Profile",
+        "description": "For each group of behaviors below, choose the one that MOST resembles you and the one that LEAST resembles you.",
+        "question_count": "Question {{current}} of {{total}}",
+        "most": "Most (+)",
+        "least": "Least (-)",
+        "next": "Next Question",
+        "back": "Previous",
+        "finish": "Finish and Save",
+        "save_success": "DISC Profile saved successfully!",
+        "save_error": "Error saving DISC profile.",
+        "questions": {
+          "1": {
+            "d": "Decisive, focused on results",
+            "i": "Enthusiastic, communicative",
+            "s": "Patient, good listener",
+            "c": "Analytical, attentive to details"
+          },
+          "2": {
+            "d": "Competitive, likes challenges",
+            "i": "Persuasive, likes to influence",
+            "s": "Stable, avoids sudden changes",
+            "c": "Systematic, follows rules"
+          },
+          "3": {
+            "d": "Direct, goes straight to the point",
+            "i": "Optimistic, sees the bright side",
+            "s": "Gentle, helpful",
+            "c": "Precise, seeks perfection"
+          },
+          "4": {
+            "d": "Bold, takes risks",
+            "i": "Popular, likes to be among people",
+            "s": "Loyal, values relationships",
+            "c": "Logical, based on facts"
+          },
+          "5": {
+            "d": "Independent, acts on their own",
+            "i": "Lively, contagious",
+            "s": "Calm, maintains balance",
+            "c": "Careful, avoids mistakes"
+          },
+          "6": {
+            "d": "Self-confident, believes in their potential",
+            "i": "Sociable, makes friends easily",
+            "s": "Friendly, welcoming",
+            "c": "Organized, keeps everything in order"
+          },
+          "7": {
+            "d": "Strong, doesn't give up easily",
+            "i": "Expressive, shows emotions",
+            "s": "Cooperative, works well in a team",
+            "c": "Perfectionist, focuses on quality"
+          },
+          "8": {
+            "d": "Fast, likes agility",
+            "i": "Charming, captures attention",
+            "s": "Methodical, prefers routine",
+            "c": "Disciplined, meets deadlines"
+          },
+          "9": {
+            "d": "Vigorous, has high energy",
+            "i": "Inspiring, motivates others",
+            "s": "Reliable, delivers what's promised",
+            "c": "Rational, thinks before acting"
+          },
+          "10": {
+            "d": "Questioning, seeks the why",
+            "i": "Relaxed, prefers a light environment",
+            "s": "Predictable, likes security",
+            "c": "Cautious, assesses risks"
+          }
+        }
+      },
+      "valores": {
+        "title": "Personal Values",
+        "description": "Values guide your decisions and behaviors. Identifying your core values helps align your goals with what truly matters to you.",
+        "selected": "Selected",
+        "status_ideal": "Great! You have selected an ideal number of values. If you want, you can select {{count}} more or finish.",
+        "status_missing": "Select at least {{count}} more values to continue (Maximum 10).",
+        "save_success": "Personal Values saved successfully!",
+        "save_error": "Error saving Personal Values."
+      },
+      "save_button": "Save Evaluation"
     }
   }
 }

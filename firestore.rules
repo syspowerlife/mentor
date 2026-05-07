@@ -66,28 +66,85 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    function isValidId(id) { 
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); 
+    }
+
     function isOwner(userId) {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
     function isDocOwner() {
-      return isAuthenticated() && request.auth.uid == resource.data.created_by;
+      return isAuthenticated() && (resource.data.get('created_by', '') == request.auth.uid || resource.data.get('createdBy', '') == request.auth.uid);
     }
 
     function isProfissionalOwner() {
-      return isAuthenticated() && request.auth.uid == resource.data.profissional_id;
+      return isAuthenticated() && request.auth.uid == resource.data.get('profissional_id', '');
+    }
+
+    function isProfissionalOf(clienteId) {
+      return isAuthenticated() && isValidId(clienteId) && 
+             get(/databases/$(database)/documents/clientes/$(clienteId)).data.get('profissional_id', '') == request.auth.uid;
+    }
+
+    function isClientUserOf(clienteId) {
+      return isAuthenticated() && isValidId(clienteId) && 
+             get(/databases/$(database)/documents/clientes/$(clienteId)).data.get('user_id', '') == request.auth.uid;
     }
 
     function isClientOf(clienteId) {
-      return isAuthenticated() && 
-             (get(/databases/$(database)/documents/clientes/$(clienteId)).data.user_id == request.auth.uid ||
-              get(/databases/$(database)/documents/clientes/$(clienteId)).data.profissional_id == request.auth.uid);
+      return isValidId(clienteId) && (isProfissionalOf(clienteId) || isClientUserOf(clienteId));
     }
 
     function isAdmin() {
+      return isAuthenticated() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    function isRoleAdmin() {
+      return isAuthenticated() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('role', '') == 'admin';
+    }
+
+    function isFullAdmin() {
       return isAuthenticated() && (
-        (request.auth.token.email != null && request.auth.token.email == "sys.powerlife@gmail.com") ||
-        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+        (request.auth.token.email == 'sys.powerlife@gmail.com' && request.auth.token.email_verified == true) ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('role', '') == 'admin'
+      );
+    }
+
+    // Generic helper for listing resources. Should check UID fields on the document.
+    // This function must NOT contain any get() or exists() calls to stay O(1) per document in a list.
+    function canListResource(data) {
+      return isAuthenticated() && (
+        data.get('created_by', '') == request.auth.uid || 
+        data.get('createdBy', '') == request.auth.uid ||
+        data.get('profissional_id', '') == request.auth.uid ||
+        data.get('profissionalId', '') == request.auth.uid ||
+        data.get('client_uid', '') == request.auth.uid ||
+        data.get('clientUid', '') == request.auth.uid ||
+        data.get('cliente_uid', '') == request.auth.uid ||
+        data.get('clienteUid', '') == request.auth.uid ||
+        data.get('cliente_id', '') == request.auth.uid ||
+        data.get('clienteId', '') == request.auth.uid ||
+        data.get('user_id', '') == request.auth.uid ||
+        data.get('userId', '') == request.auth.uid ||
+        data.get('usuario_id', '') == request.auth.uid ||
+        data.get('usuarioId', '') == request.auth.uid ||
+        data.get('mentor_id', '') == request.auth.uid ||
+        data.get('mentorId', '') == request.auth.uid ||
+        data.get('gestor_id', '') == request.auth.uid ||
+        data.get('gestorId', '') == request.auth.uid ||
+        data.get('author_id', '') == request.auth.uid ||
+        data.get('authorId', '') == request.auth.uid ||
+        data.get('autor_id', '') == request.auth.uid ||
+        data.get('sender_id', '') == request.auth.uid ||
+        data.get('senderId', '') == request.auth.uid ||
+        data.get('sender_uid', '') == request.auth.uid ||
+        data.get('receiver_id', '') == request.auth.uid ||
+        data.get('receiverId', '') == request.auth.uid ||
+        data.get('uploadedBy', '') == request.auth.uid ||
+        data.get('reporter_id', '') == request.auth.uid ||
+        data.get('uid', '') == request.auth.uid
       );
     }
 
@@ -96,16 +153,14 @@ service cloud.firestore {
     }
 
     function isPdiParticipant(pdiId) {
-      let pdi = getPdi(pdiId);
-      return isAuthenticated() && (request.auth.uid == pdi.usuario_id || request.auth.uid == pdi.gestor_id || isAdmin());
+      return isAuthenticated() && (request.auth.uid == getPdi(pdiId).get('usuario_id', '') || request.auth.uid == getPdi(pdiId).get('gestor_id', '') || isFullAdmin());
     }
 
     function isPdiEditor(pdiId) {
-      let pdi = getPdi(pdiId);
       return isAuthenticated() && (
-        request.auth.uid == pdi.gestor_id || 
-        isAdmin() ||
-        (request.auth.uid == pdi.usuario_id && (pdi.status == 'rascunho' || pdi.status == 'ajuste_solicitado'))
+        request.auth.uid == getPdi(pdiId).get('gestor_id', '') || 
+        isFullAdmin() ||
+        (request.auth.uid == getPdi(pdiId).get('usuario_id', '') && (getPdi(pdiId).get('status', '') == 'rascunho' || getPdi(pdiId).get('status', '') == 'ajuste_solicitado'))
       );
     }
 
@@ -170,7 +225,11 @@ service cloud.firestore {
       return data.mentor_id == request.auth.uid &&
              data.cliente_id is string &&
              data.content is string && data.content.size() > 0 &&
-             data.created_at is timestamp;
+             data.created_at is timestamp &&
+             (!('color' in data) || (data.color is string && data.color in ['yellow', 'blue', 'green', 'pink', 'purple', 'gray'])) &&
+             (!('profissional_id' in data) || data.profissional_id == request.auth.uid) &&
+             (!('updated_at' in data) || data.updated_at is timestamp) &&
+             (!('cliente_uid' in data) || (data.cliente_uid is string || data.cliente_uid == null));
     }
 
     function isValidNotification(data) {
@@ -306,6 +365,7 @@ service cloud.firestore {
     function isValidMensagem(data) {
       return data.cliente_id is string &&
              data.mentor_id is string &&
+             (!('cliente_uid' in data) || data.cliente_uid is string) &&
              data.sender_id == request.auth.uid &&
              data.content is string && data.content.size() > 0 && data.content.size() < 5000 &&
              data.created_at is timestamp &&
@@ -330,26 +390,42 @@ service cloud.firestore {
              data.timestamp is timestamp;
     }
 
+    function isValidAIInsight(data) {
+      return data.userId == request.auth.uid &&
+             data.type in ['disc', 'swot', 'roda', 'integrated'] &&
+             data.content is map &&
+             data.createdAt is timestamp;
+    }
+
     // Rules
     match /system_logs/{logId} {
-      allow read: if isAdmin();
-      allow create: if isAdmin() && isValidLog(request.resource.data);
+      allow read: if isFullAdmin();
+      allow create: if isFullAdmin() && isValidLog(request.resource.data);
       allow update, delete: if false;
     }
 
+    match /ai_insights/{insightId} {
+      allow get: if isAuthenticated() && (resource.data.userId == request.auth.uid || isFullAdmin());
+      allow list: if isFullAdmin() || canListResource(resource.data);
+      allow create: if isAuthenticated() && isValidAIInsight(request.resource.data);
+      allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow update: if false;
+    }
+
     match /admins/{adminId} {
-      allow read: if isAdmin();
-      allow write: if isAdmin();
+      allow read: if isAuthenticated() && (request.auth.uid == adminId || isFullAdmin());
+      allow write: if isFullAdmin();
     }
 
     match /admin_audit_logs/{logId} {
-      allow read: if isAdmin();
+      allow read: if isFullAdmin();
       allow create: if true; // Backend/Client can create, protected by isAdmin() if from client
       allow update, delete: if false;
     }
 
     match /users/{userId} {
-      allow read: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
+      allow get: if isAuthenticated() && (request.auth.uid == userId || isFullAdmin());
+      allow list: if isFullAdmin() || canListResource(resource.data);
       allow create: if isOwner(userId) && isValidUser(request.resource.data) && 
                     request.resource.data.plan == 'free' && 
                     (request.resource.data.role == 'user' || request.resource.data.role == 'client');
@@ -367,101 +443,108 @@ service cloud.firestore {
     }
 
     match /rodas_da_vida/{rodaId} {
-      allow read: if isAuthenticated() && (resource.data.created_by == request.auth.uid || isClientOf(resource.data.cliente_id) || isAdmin());
-      allow create: if isAuthenticated() && isValidRoda(request.resource.data);
-      allow update, delete: if isDocOwner() || isAdmin();
+      allow get: if isAuthenticated() && isValidId(rodaId) && (isClientOf(resource.data.get('cliente_id', '')) || isFullAdmin());
+      allow list: if isFullAdmin() || canListResource(resource.data);
     }
 
     match /metas_smart/{metaId} {
-      allow read: if isAuthenticated() && (resource.data.created_by == request.auth.uid || isClientOf(resource.data.cliente_id) || isAdmin());
-      allow create: if isAuthenticated() && isValidMeta(request.resource.data);
-      allow update: if (isDocOwner() || isAdmin()) && isValidMeta(request.resource.data);
-      allow delete: if isDocOwner() || isAdmin();
+      allow get: if isAuthenticated() && isValidId(metaId) && (isClientOf(resource.data.get('cliente_id', '')) || isFullAdmin());
+      allow list: if isFullAdmin() || canListResource(resource.data);
+      allow update: if (isDocOwner() || isFullAdmin()) && isValidMeta(request.resource.data);
+      allow delete: if isDocOwner() || isFullAdmin();
     }
 
     match /diarios_reflexao/{diarioId} {
-      allow read: if isAuthenticated() && (resource.data.created_by == request.auth.uid || (!resource.data.is_private && isAdmin()));
-      allow create: if isAuthenticated() && request.resource.data.created_by == request.auth.uid;
-      allow update, delete: if isDocOwner();
+      allow get: if isAuthenticated() && (
+        resource.data.created_by == request.auth.uid || 
+        (resource.data.is_private == false && (isFullAdmin() || resource.data.profissional_id == request.auth.uid))
+      );
+      allow list: if isFullAdmin() || canListResource(resource.data);
+      allow update, delete: if isDocOwner() || isFullAdmin();
     }
 
     match /agendamentos/{agendamentoId} {
-      allow read: if isAuthenticated() && (resource.data.created_by == request.auth.uid || isClientOf(resource.data.cliente_id) || isAdmin());
-      allow create: if isAuthenticated() && isValidAgendamento(request.resource.data);
-      allow update: if (isDocOwner() || isAdmin()) && isValidAgendamento(request.resource.data);
-      allow delete: if isDocOwner() || isAdmin();
+      allow get: if isAuthenticated() && isValidId(agendamentoId) && (resource.data.get('created_by', '') == request.auth.uid || isClientOf(resource.data.get('cliente_id', '')) || isFullAdmin());
+      allow list: if isFullAdmin() || canListResource(resource.data);
+      allow update: if (isDocOwner() || isFullAdmin()) && isValidAgendamento(request.resource.data);
+      allow delete: if isDocOwner() || isFullAdmin();
     }
 
     match /clientes/{clienteId} {
-      allow read: if isAuthenticated() && (resource.data.profissional_id == request.auth.uid || resource.data.user_id == request.auth.uid || isAdmin());
-      allow create: if isAuthenticated() && request.resource.data.profissional_id == request.auth.uid && isValidCliente(request.resource.data);
-      allow update: if (isProfissionalOwner() || isAdmin() || (isAuthenticated() && resource.data.user_id == request.auth.uid)) && isValidCliente(request.resource.data);
-      allow delete: if isProfissionalOwner() || isAdmin();
+      allow get: if isAuthenticated() && isValidId(clienteId) && (resource.data.get('profissional_id', '') == request.auth.uid || resource.data.get('user_id', '') == request.auth.uid || isFullAdmin());
+      allow list: if isFullAdmin() || canListResource(resource.data);
+      allow update: if (isProfissionalOwner() || isFullAdmin() || (isAuthenticated() && resource.data.user_id == request.auth.uid)) && isValidCliente(request.resource.data);
+      allow delete: if isProfissionalOwner() || isFullAdmin();
 
       match /anexos/{anexoId} {
-        allow read: if isAuthenticated() && (get(/databases/$(database)/documents/clientes/$(clienteId)).data.profissional_id == request.auth.uid || isAdmin());
-        allow create: if isAuthenticated() && isValidAnexo(request.resource.data);
-        allow delete: if isAuthenticated() && (get(/databases/$(database)/documents/clientes/$(clienteId)).data.profissional_id == request.auth.uid || isAdmin());
+        allow get: if isClientOf(clienteId);
+        allow list: if isFullAdmin() || canListResource(resource.data) || isClientOf(clienteId);
+        allow create: if isClientOf(clienteId) && isValidAnexo(request.resource.data);
+        allow delete: if isProfissionalOf(clienteId) || (isAuthenticated() && resource.data.uploadedBy == request.auth.uid);
       }
 
       match /professional_notes/{noteId} {
-        allow read: if isAuthenticated() && (get(/databases/$(database)/documents/clientes/$(clienteId)).data.profissional_id == request.auth.uid || isAdmin());
-        allow create, update: if isAuthenticated() && (get(/databases/$(database)/documents/clientes/$(clienteId)).data.profissional_id == request.auth.uid || isAdmin()) && isValidProfessionalNote(request.resource.data);
-        allow delete: if isAuthenticated() && (get(/databases/$(database)/documents/clientes/$(clienteId)).data.profissional_id == request.auth.uid || isAdmin());
+        allow get: if isProfissionalOf(clienteId);
+        allow list: if isFullAdmin() || canListResource(resource.data) || isProfissionalOf(clienteId);
+        allow create, update: if isProfissionalOf(clienteId) && isValidProfessionalNote(request.resource.data);
+        allow delete: if isProfissionalOf(clienteId);
       }
     }
 
     match /analises_swot/{swotId} {
-      allow read: if isAuthenticated() && (resource.data.created_by == request.auth.uid || isClientOf(resource.data.cliente_id) || isAdmin());
-      allow create: if isAuthenticated() && isValidSwot(request.resource.data);
-      allow update: if (isDocOwner() || isAdmin()) && isValidSwot(request.resource.data);
-      allow delete: if isDocOwner() || isAdmin();
+      allow get: if isAuthenticated() && isValidId(swotId) && (resource.data.get('created_by', '') == request.auth.uid || isClientOf(resource.data.get('cliente_id', '')) || isFullAdmin());
+      allow list: if isFullAdmin() || canListResource(resource.data);
+      allow update: if (isDocOwner() || isFullAdmin()) && isValidSwot(request.resource.data);
+      allow delete: if isDocOwner() || isFullAdmin();
     }
 
     match /perfis_disc/{discId} {
-      allow read: if isAuthenticated() && (resource.data.created_by == request.auth.uid || isClientOf(resource.data.cliente_id) || isAdmin());
-      allow create: if isAuthenticated() && isValidDisc(request.resource.data);
-      allow update: if (isDocOwner() || isAdmin()) && isValidDisc(request.resource.data);
-      allow delete: if isDocOwner() || isAdmin();
+      allow get: if isAuthenticated() && isValidId(discId) && (resource.data.get('created_by', '') == request.auth.uid || isClientOf(resource.data.get('cliente_id', '')) || isFullAdmin());
+      allow list: if isFullAdmin() || canListResource(resource.data);
+      allow update: if (isDocOwner() || isFullAdmin()) && isValidDisc(request.resource.data);
+      allow delete: if isDocOwner() || isFullAdmin();
     }
 
     match /valores_pessoais/{valorId} {
-      allow read: if isAuthenticated() && (resource.data.created_by == request.auth.uid || isClientOf(resource.data.cliente_id) || isAdmin());
-      allow create: if isAuthenticated() && isValidValores(request.resource.data);
-      allow update: if (isDocOwner() || isAdmin()) && isValidValores(request.resource.data);
-      allow delete: if isDocOwner() || isAdmin();
+      allow get: if isAuthenticated() && (resource.data.created_by == request.auth.uid || isClientOf(resource.data.cliente_id) || isFullAdmin());
+      allow list: if isFullAdmin() || canListResource(resource.data);
+      allow update: if (isDocOwner() || isFullAdmin()) && isValidValores(request.resource.data);
+      allow delete: if isDocOwner() || isFullAdmin();
     }
 
     match /pdis/{pdiId} {
-      allow read: if isAuthenticated() && (resource.data.usuario_id == request.auth.uid || resource.data.gestor_id == request.auth.uid || isAdmin());
+      allow get: if isAuthenticated() && isValidId(pdiId) && (isPdiParticipant(pdiId) || isFullAdmin());
+      allow list: if isFullAdmin() || canListResource(resource.data);
       allow create: if isAuthenticated() && 
-                    (request.resource.data.usuario_id == request.auth.uid || request.resource.data.gestor_id == request.auth.uid || isAdmin()) &&
+                    (request.resource.data.usuario_id == request.auth.uid || request.resource.data.gestor_id == request.auth.uid || isFullAdmin()) &&
                     isValidPdi(request.resource.data);
       allow update: if isAuthenticated() && 
                     (
                       // Gestor/Admin can update anything if valid
-                      (resource.data.gestor_id == request.auth.uid || isAdmin()) ||
+                      (resource.data.gestor_id == request.auth.uid || isFullAdmin()) ||
                       // Collaborator can update if it's their PDI and it's in rascunho/ajuste_solicitado
                       (resource.data.usuario_id == request.auth.uid && (resource.data.status == 'rascunho' || resource.data.status == 'ajuste_solicitado'))
                     ) && isValidPdi(request.resource.data) &&
                     request.resource.data.usuario_id == resource.data.usuario_id &&
                     (!('created_at' in resource.data) || request.resource.data.created_at == resource.data.created_at);
-      allow delete: if isAuthenticated() && (resource.data.gestor_id == request.auth.uid || isAdmin());
+      allow delete: if isAuthenticated() && (resource.data.gestor_id == request.auth.uid || isFullAdmin());
     }
 
     match /pdi_metas/{metaId} {
-      allow read: if isPdiParticipant(resource.data.pdi_id);
+      allow get: if isAuthenticated() && isValidId(metaId) && isPdiParticipant(resource.data.get('pdi_id', ''));
+      allow list: if isFullAdmin() || canListResource(resource.data);
       allow create: if isPdiEditor(request.resource.data.pdi_id) && isValidPdiItem(request.resource.data);
-      allow update: if isPdiEditor(resource.data.pdi_id) && isValidPdiItem(request.resource.data) &&
+      allow update: if (isPdiEditor(resource.data.pdi_id) || isFullAdmin()) && isValidPdiItem(request.resource.data) &&
                     request.resource.data.pdi_id == resource.data.pdi_id &&
                     (!('created_at' in resource.data) || request.resource.data.created_at == resource.data.created_at);
       allow delete: if isPdiEditor(resource.data.pdi_id);
     }
 
     match /pdi_acoes/{acaoId} {
-      allow read: if isPdiParticipant(resource.data.pdi_id);
+      allow get: if isAuthenticated() && isValidId(acaoId) && isPdiParticipant(resource.data.get('pdi_id', ''));
+      allow list: if isFullAdmin() || canListResource(resource.data);
       allow create: if isPdiParticipant(request.resource.data.pdi_id) && isValidPdiItem(request.resource.data);
-      allow update: if isPdiParticipant(resource.data.pdi_id) && isValidPdiItem(request.resource.data) &&
+      allow update: if (isPdiParticipant(resource.data.pdi_id) || isFullAdmin()) && isValidPdiItem(request.resource.data) &&
                     request.resource.data.pdi_id == resource.data.pdi_id &&
                     request.resource.data.meta_id == resource.data.meta_id &&
                     (!('created_at' in resource.data) || request.resource.data.created_at == resource.data.created_at);
@@ -469,36 +552,39 @@ service cloud.firestore {
     }
 
     match /pdi_feedbacks/{feedbackId} {
-      allow read: if isPdiParticipant(resource.data.pdi_id);
+      allow get: if isAuthenticated() && isValidId(feedbackId) && isPdiParticipant(resource.data.get('pdi_id', ''));
+      allow list: if isFullAdmin() || canListResource(resource.data);
       allow create: if isPdiParticipant(request.resource.data.pdi_id) && isValidPdiFeedback(request.resource.data);
       allow update: if isAuthenticated() && resource.data.autor_id == request.auth.uid && 
                     isValidPdiFeedback(request.resource.data) &&
                     request.resource.data.pdi_id == resource.data.pdi_id &&
                     request.resource.data.autor_id == resource.data.autor_id &&
                     (!('data' in resource.data) || request.resource.data.data == resource.data.data);
-      allow delete: if isAuthenticated() && (resource.data.autor_id == request.auth.uid || isAdmin());
+      allow delete: if isAuthenticated() && (resource.data.autor_id == request.auth.uid || isFullAdmin());
     }
 
     match /competencias/{competenciaId} {
       allow read: if isAuthenticated();
-      allow write: if isAdmin();
+      allow write: if isFullAdmin();
     }
 
     match /pdi_competencias/{pdiCompId} {
-      allow read: if isPdiParticipant(resource.data.pdi_id);
+      allow get: if isAuthenticated() && isValidId(pdiCompId) && isPdiParticipant(resource.data.get('pdi_id', ''));
+      allow list: if isFullAdmin() || canListResource(resource.data);
       allow create: if isPdiEditor(request.resource.data.pdi_id) && isValidPdiCompetencia(request.resource.data);
-      allow update: if isPdiEditor(resource.data.pdi_id) && isValidPdiCompetencia(request.resource.data) && 
+      allow update: if (isPdiEditor(resource.data.pdi_id) || isFullAdmin()) && isValidPdiCompetencia(request.resource.data) && 
                     request.resource.data.pdi_id == resource.data.pdi_id &&
                     (!('created_at' in resource.data) || request.resource.data.created_at == resource.data.created_at);
       allow delete: if isPdiEditor(resource.data.pdi_id);
     }
 
     match /notifications/{notificationId} {
-      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow get: if isAuthenticated() && (resource.data.get('userId', '') == request.auth.uid || isFullAdmin());
+      allow list: if isFullAdmin() || canListResource(resource.data);
       allow create: if isAuthenticated() && isValidNotification(request.resource.data);
-      allow update: if isAuthenticated() && resource.data.userId == request.auth.uid && 
+      allow update: if isAuthenticated() && (resource.data.userId == request.auth.uid || isFullAdmin()) && 
                     request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
-      allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow delete: if isAuthenticated() && (resource.data.userId == request.auth.uid || isFullAdmin());
     }
 
     match /mail/{mailId} {
@@ -508,46 +594,54 @@ service cloud.firestore {
     }
 
     match /sessoes_mentoring/{sessaoId} {
-      allow read: if isAuthenticated() && (resource.data.created_by == request.auth.uid || isAdmin());
+      allow get: if isAuthenticated() && isValidId(sessaoId) && (resource.data.get('created_by', '') == request.auth.uid || isFullAdmin());
+      allow list: if isFullAdmin() || canListResource(resource.data);
       allow create: if isAuthenticated() && isValidSessao(request.resource.data);
-      allow update: if (isDocOwner() || isAdmin()) && isValidSessao(request.resource.data);
-      allow delete: if isDocOwner() || isAdmin();
+      allow update: if (isDocOwner() || isFullAdmin()) && isValidSessao(request.resource.data);
+      allow delete: if isDocOwner() || isFullAdmin();
     }
 
     match /avaliacoes_sessoes/{avaliacaoId} {
-      allow read: if isAuthenticated() && (resource.data.mentor_id == request.auth.uid || resource.data.cliente_id == request.auth.uid || isAdmin());
+      allow get: if isAuthenticated() && isValidId(avaliacaoId) && (resource.data.get('mentor_id', '') == request.auth.uid || resource.data.get('cliente_id', '') == request.auth.uid || isFullAdmin());
+      allow list: if isFullAdmin() || canListResource(resource.data);
       allow create: if isAuthenticated() && isValidAvaliacao(request.resource.data);
-      allow update, delete: if isAdmin();
+      allow update, delete: if isFullAdmin();
     }
 
     match /invitations/{invitationId} {
-      allow read: if isAuthenticated() && (resource.data.invited_by == request.auth.uid || isAdmin());
-      allow create: if isAdmin() && isValidInvitation(request.resource.data);
-      allow update: if isAdmin() && isValidInvitation(request.resource.data);
-      allow delete: if isAdmin();
+      allow read: if isAuthenticated() && (resource.data.invited_by == request.auth.uid || isFullAdmin());
+      allow create: if isFullAdmin() && isValidInvitation(request.resource.data);
+      allow update: if isFullAdmin() && isValidInvitation(request.resource.data);
+      allow delete: if isFullAdmin();
     }
 
     match /faqs/{faqId} {
       allow read: if true;
-      allow write: if isAdmin() && isValidFaq(request.resource.data);
+      allow write: if isFullAdmin() && isValidFaq(request.resource.data);
+    }
+
+    match /settings/{docId} {
+      allow read: if true;
+      allow write: if isFullAdmin();
     }
 
     match /mensagens/{mensagemId} {
-      allow read: if isAuthenticated() && (resource.data.cliente_id == request.auth.uid || resource.data.mentor_id == request.auth.uid || isClientOf(resource.data.cliente_id) || isAdmin());
+      allow get: if isAuthenticated() && isValidId(mensagemId) && (resource.data.get('cliente_id', '') == request.auth.uid || resource.data.get('mentor_id', '') == request.auth.uid || isFullAdmin());
+      allow list: if isFullAdmin() || canListResource(resource.data);
       allow create: if isAuthenticated() && isValidMensagem(request.resource.data);
       allow update: if isAuthenticated() && (resource.data.mentor_id == request.auth.uid || resource.data.cliente_id == request.auth.uid) && 
                     request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
-      allow delete: if isAdmin();
+      allow delete: if isFullAdmin();
     }
 
     match /planos/{planoId} {
       allow read: if true;
-      allow write: if isAdmin() && isValidPlano(request.resource.data);
-      allow delete: if isAdmin();
+      allow write: if isFullAdmin() && isValidPlano(request.resource.data);
+      allow delete: if isFullAdmin();
     }
 
     match /revenue_history/{revenueId} {
-      allow read: if isAdmin();
+      allow read: if isFullAdmin();
       allow write: if false; // Managed by server-side Admin SDK
     }
   }

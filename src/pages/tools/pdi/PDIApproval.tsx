@@ -23,6 +23,7 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { formatDateOrTimestamp } from '@/lib/utils';
 import { useLinkedUsers } from '@/hooks/useLinkedUsers';
+import { PDIStatus, NotificationType } from '@/types/enums';
 
 export function PDIApproval() {
   const { t } = useTranslation();
@@ -45,7 +46,7 @@ export function PDIApproval() {
     const q = query(
       collection(db, path),
       where('gestor_id', '==', currentUser.uid),
-      where('status', '==', 'pendente_aprovacao')
+      where('status', '==', PDIStatus.PENDENTE_APROVACAO)
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -62,7 +63,7 @@ export function PDIApproval() {
   const handleAction = async () => {
     if (!selectedPdi || !actionType) return;
 
-    const newStatus = actionType === 'approve' ? 'ativo' : 'ajuste_solicitado';
+    const newStatus = actionType === 'approve' ? PDIStatus.ATIVO : PDIStatus.AJUSTE_SOLICITADO;
     const feedbackMsg = actionType === 'approve' 
       ? t('pdi.approval.notifications.approve_feedback', { comment }) 
       : t('pdi.approval.notifications.adjust_feedback', { comment });
@@ -89,9 +90,24 @@ export function PDIApproval() {
         message: actionType === 'approve' 
           ? t('pdi.approval.notifications.approve_msg') 
           : t('pdi.approval.notifications.adjust_msg'),
-        type: actionType === 'approve' ? 'success' : 'warning',
+        type: actionType === 'approve' ? NotificationType.SUCCESS : NotificationType.WARNING,
         link: `/ferramentas/pdi/${selectedPdi.id}`,
         triggerId: `pdi_decision_${selectedPdi.id}_${newStatus}`
+      });
+
+      const token = await currentUser?.getIdToken();
+      await fetch('/api/notifications/notify-pdi-change', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ 
+          pdiId: selectedPdi.id, 
+          status: newStatus, // 'ativo' or 'ajuste_solicitado'
+          studentId: selectedPdi.usuario_id, 
+          mentorId: currentUser.uid 
+        })
       });
 
       toast.success(actionType === 'approve' ? t('pdi.approval.success.approved') : t('pdi.approval.success.adjustment_sent'));

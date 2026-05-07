@@ -13,6 +13,7 @@ import {
 } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '@/lib/firebase';
 import { useAuth } from '@/lib/AuthContext';
+import { FeatureFallback } from '@/components/FeatureFallback';
 import { useSearchParams } from 'react-router-dom';
 import { useAgendamentos } from '@/hooks/useAgendamentos';
 import { useMetas } from '@/hooks/useMetas';
@@ -37,13 +38,17 @@ import { toast } from 'sonner';
 import { DeleteConfirmDialog } from '@/components/DeleteConfirmDialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { agendamentoSchema, AgendamentoFormData } from '@/types/schemas';
+import { AgendamentoTipo, AgendamentoStatus, NotificationType } from '@/types/enums';
 import { CardListSkeleton } from '@/components/skeletons/FeedbackSkeletons';
 import { sendNotification } from '@/lib/notifications';
+
+import { PlanGate } from '@/components/PlanGate';
 
 export function Agendamentos() {
   const { user } = useAuth();
   const [searchParams] = useSearchParams();
   const clienteId = searchParams.get('clienteId');
+  const clienteUid = searchParams.get('clienteUid');
   
   const { agendamentos, isLoading: isLoadingAgendamentos } = useAgendamentos(clienteId);
   const { metas, isLoading: isLoadingMetas } = useMetas();
@@ -152,8 +157,8 @@ export function Agendamentos() {
   } = useForm<AgendamentoFormData>({
     resolver: zodResolver(agendamentoSchema),
     defaultValues: {
-      tipo: 'sessao',
-      status: 'pendente',
+      tipo: AgendamentoTipo.SESSAO,
+      status: AgendamentoStatus.PENDENTE,
       meta_relacionada_id: 'none',
       google_event_id: null
     }
@@ -166,8 +171,10 @@ export function Agendamentos() {
         await addDoc(collection(db, path), {
           ...novoAgendamento,
           created_by: user?.uid,
+          profissional_id: user?.uid,
           created_at: Timestamp.now(),
-          cliente_id: clienteId || null
+          cliente_id: clienteId || null,
+          cliente_uid: clienteUid || null
         });
       } catch (error) {
         handleFirestoreError(error, OperationType.CREATE, path);
@@ -182,7 +189,7 @@ export function Agendamentos() {
           userId: user.uid,
           title: 'Novo Agendamento',
           message: `Sessão "${variables.titulo}" agendada para ${safeFormat(variables.data_inicio, 'dd/MM/yyyy HH:mm')}.`,
-          type: 'info'
+          type: NotificationType.INFO
         });
       }
     },
@@ -246,19 +253,19 @@ export function Agendamentos() {
 
   const getStatusBadge = (status: string) => {
     switch(status) {
-      case 'concluido': return <Badge className="bg-green-500">Concluído</Badge>;
-      case 'em_andamento': return <Badge className="bg-blue-500">Em Andamento</Badge>;
-      case 'cancelado': return <Badge variant="destructive">Cancelado</Badge>;
+      case AgendamentoStatus.CONCLUIDO: return <Badge className="bg-green-500">Concluído</Badge>;
+      case AgendamentoStatus.EM_ANDAMENTO: return <Badge className="bg-blue-500">Em Andamento</Badge>;
+      case AgendamentoStatus.CANCELADO: return <Badge variant="destructive">Cancelado</Badge>;
       default: return <Badge variant="secondary">Pendente</Badge>;
     }
   };
 
   const getTipoBadge = (tipo: string) => {
     switch(tipo) {
-      case 'sessao': return <Badge variant="outline" className="border-purple-200 text-purple-700 bg-purple-50">Sessão</Badge>;
-      case 'tarefa': return <Badge variant="outline" className="border-blue-200 text-blue-700 bg-blue-50">Tarefa</Badge>;
-      case 'acompanhamento': return <Badge variant="outline" className="border-orange-200 text-orange-700 bg-orange-50">Acompanhamento</Badge>;
-      case 'revisao': return <Badge variant="outline" className="border-green-200 text-green-700 bg-green-50">Revisão</Badge>;
+      case AgendamentoTipo.SESSAO: return <Badge variant="outline" className="border-purple-200 text-purple-700 bg-purple-50">Sessão</Badge>;
+      case AgendamentoTipo.TAREFA: return <Badge variant="outline" className="border-blue-200 text-blue-700 bg-blue-50">Tarefa</Badge>;
+      case AgendamentoTipo.ACOMPANHAMENTO: return <Badge variant="outline" className="border-orange-200 text-orange-700 bg-orange-50">Acompanhamento</Badge>;
+      case AgendamentoTipo.REVISAO: return <Badge variant="outline" className="border-green-200 text-green-700 bg-green-50">Revisão</Badge>;
       default: return <Badge variant="outline">{tipo}</Badge>;
     }
   };
@@ -271,19 +278,23 @@ export function Agendamentos() {
     <div className="p-6 md:p-8 max-w-7xl mx-auto space-y-8">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <h1 className="text-3xl font-bold text-slate-800">Agendamentos</h1>
-        <Button 
-          variant={isGoogleConnected ? "outline" : "default"}
-          className={`flex items-center gap-2 ${isGoogleConnected ? 'border-green-200 text-green-700 bg-green-50 hover:bg-green-100' : 'bg-blue-600 hover:bg-blue-700'}`}
-          onClick={handleSync}
-          disabled={isSyncing}
-        >
-          {isSyncing ? (
-            <RefreshCw className="w-4 h-4 animate-spin" />
-          ) : (
-            <Globe className="w-4 h-4" />
-          )}
-          {isGoogleConnected ? 'Sincronizar com Google Calendar' : 'Conectar Google Calendar'}
-        </Button>
+        <PlanGate feature="googleCalendar" showUpgradeModal={true}>
+          <FeatureFallback feature="googleCalendar" hideIfMissing>
+            <Button 
+              variant={isGoogleConnected ? "outline" : "default"}
+              className={`flex items-center gap-2 ${isGoogleConnected ? 'border-green-200 text-green-700 bg-green-50 hover:bg-green-100' : 'bg-blue-600 hover:bg-blue-700'}`}
+              onClick={handleSync}
+              disabled={isSyncing}
+            >
+              {isSyncing ? (
+                <RefreshCw className="w-4 h-4 animate-spin" />
+              ) : (
+                <Globe className="w-4 h-4" />
+              )}
+              {isGoogleConnected ? 'Sincronizar com Google Calendar' : 'Conectar Google Calendar'}
+            </Button>
+          </FeatureFallback>
+        </PlanGate>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -333,10 +344,10 @@ export function Agendamentos() {
                   <Select value={watch('tipo')} onValueChange={v => setValue('tipo', v as any)}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="sessao">Sessão</SelectItem>
-                      <SelectItem value="tarefa">Tarefa</SelectItem>
-                      <SelectItem value="acompanhamento">Acompanhamento</SelectItem>
-                      <SelectItem value="revisao">Revisão</SelectItem>
+                      <SelectItem value={AgendamentoTipo.SESSAO}>Sessão</SelectItem>
+                      <SelectItem value={AgendamentoTipo.TAREFA}>Tarefa</SelectItem>
+                      <SelectItem value={AgendamentoTipo.ACOMPANHAMENTO}>Acompanhamento</SelectItem>
+                      <SelectItem value={AgendamentoTipo.REVISAO}>Revisão</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -345,10 +356,10 @@ export function Agendamentos() {
                   <Select value={watch('status')} onValueChange={v => setValue('status', v as any)}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="pendente">Pendente</SelectItem>
-                      <SelectItem value="em_andamento">Em Andamento</SelectItem>
-                      <SelectItem value="concluido">Concluído</SelectItem>
-                      <SelectItem value="cancelado">Cancelado</SelectItem>
+                      <SelectItem value={AgendamentoStatus.PENDENTE}>Pendente</SelectItem>
+                      <SelectItem value={AgendamentoStatus.EM_ANDAMENTO}>Em Andamento</SelectItem>
+                      <SelectItem value={AgendamentoStatus.CONCLUIDO}>Concluído</SelectItem>
+                      <SelectItem value={AgendamentoStatus.CANCELADO}>Cancelado</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -522,10 +533,10 @@ function EditAgendamentoModal({ isOpen, onClose, agendamento, onSave, isLoading,
               <Select value={watch('tipo')} onValueChange={v => setValue('tipo', v as any)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="sessao">Sessão</SelectItem>
-                  <SelectItem value="tarefa">Tarefa</SelectItem>
-                  <SelectItem value="acompanhamento">Acompanhamento</SelectItem>
-                  <SelectItem value="revisao">Revisão</SelectItem>
+                  <SelectItem value={AgendamentoTipo.SESSAO}>Sessão</SelectItem>
+                  <SelectItem value={AgendamentoTipo.TAREFA}>Tarefa</SelectItem>
+                  <SelectItem value={AgendamentoTipo.ACOMPANHAMENTO}>Acompanhamento</SelectItem>
+                  <SelectItem value={AgendamentoTipo.REVISAO}>Revisão</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -534,10 +545,10 @@ function EditAgendamentoModal({ isOpen, onClose, agendamento, onSave, isLoading,
               <Select value={watch('status')} onValueChange={v => setValue('status', v as any)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="pendente">Pendente</SelectItem>
-                  <SelectItem value="em_andamento">Em Andamento</SelectItem>
-                  <SelectItem value="concluido">Concluído</SelectItem>
-                  <SelectItem value="cancelado">Cancelado</SelectItem>
+                  <SelectItem value={AgendamentoStatus.PENDENTE}>Pendente</SelectItem>
+                  <SelectItem value={AgendamentoStatus.EM_ANDAMENTO}>Em Andamento</SelectItem>
+                  <SelectItem value={AgendamentoStatus.CONCLUIDO}>Concluído</SelectItem>
+                  <SelectItem value={AgendamentoStatus.CANCELADO}>Cancelado</SelectItem>
                 </SelectContent>
               </Select>
             </div>
