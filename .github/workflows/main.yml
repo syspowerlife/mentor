@@ -27,9 +27,18 @@ jobs:
       continue-on-error: true
 
     - name: Build
-      run: npm run build
+      run: |
+        npm run build
+        cp dist/index.html dist/404.html
       env:
         # Mocking variables for build process if needed
         VITE_FIREBASE_API_KEY: "mock_key"
         VITE_FIREBASE_AUTH_DOMAIN: "mock.firebaseapp.com"
         VITE_FIREBASE_PROJECT_ID: "mock-project"
+
+    - name: Deploy to GitHub Pages
+      uses: peaceiris/actions-gh-pages@v3
+      if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: ./dist
