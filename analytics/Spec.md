@@ -1,17 +1,42 @@
-# Spec de Implementação - O que falta
-Data e Hora de Geração: 2026-05-05 11:02 (Brasília)
+# Especificação de Implementação (Pendências) - PowerLife
 
-## 1. Páginas (Pages)
-- **ClientDossier.tsx**: Página para visualização consolidada de todos os dados de um cliente específico.
-- **SuccessPayment.tsx / FailurePayment.tsx**: Páginas de retorno do Mercado Pago.
-- **AdminMétricas.tsx**: Dashboard administrativo com gráficos de crescimento e uso.
+**Data de Geração:** 08/05/2026 13:58:15 (Horário de Brasília)
 
-## 2. Comportamentos (Behaviors)
-- **Persistência de IA**: Salvar os insights do Gemini no Firestore (`ai_insights`) vinculando ao ID do cliente/processo.
-- **Webhook Mercado Pago**: Endpoint no `server.ts` para capturar atualizações de pagamento e atualizar o status do plano no Firestore.
-- **Filtro de Planos**: Middleware ou hook de proteção que bloqueia acesso a rotas premium se o status for `free`.
+Este documento detalha os componentes, páginas e comportamentos identificados como pendentes no `analytics/report.md`.
 
-## 3. Componentes (Components)
-- **DossierSummary**: Resumo visual (cards/graficos) consolidando DISC, SWOT e Roda da Vida.
-- **PaymentGate**: Overlay/Modal que aparece quando o usuário tenta usar uma funcionalidade não inclusa no plano dele.
-- **EmailTemplateBuilder**: Sistema (backend/service) para gerar corpos de email dinâmicos.
+## 1. Páginas e Vistas (Páginas)
+
+*   **Página: Editor de Manuais (Admin)**
+    *   **Caminho sugerido**: `/Admin/Manuais`
+    *   **Descrição**: Interface CRUD para categorias de ajuda, artigos em markdown e links de vídeos do YouTube/Vimeo.
+*   **Página: Construtor de Templates de Formulário**
+    *   **Caminho sugerido**: `/Admin/Templates`
+    *   **Descrição**: Permite criar campos personalizados (Input, Select, Rating) para avaliações customizadas além das ferramentas padrão.
+*   **Página: Centro de Prova Social**
+    *   **Caminho sugerido**: `/Admin/Marketing`
+    *   **Descrição**: Lista depoimentos positivos filtrados das avaliações, com botão de "Aprovar" e "Exportar Card de Prova Social" (PNG/PDF).
+
+## 2. Comportamentos e Lógica (Behaviors)
+
+*   **Exportação Consolidada da Jornada**:
+    *   Lógica no `PdfService.ts` para buscar dados históricos de um cliente (múltiplas ferramentas) e gerar um dossiê PDF estruturado.
+*   **Chat de Coaching Contextual (IA)**:
+    *   Fluxo de mensagens utilizando a API do Gemini com sistema de RAG (Retrieval-Augmented Generation) baseado no histórico do Diário do cliente.
+*   **Exportação CSV Admin**:
+    *   Funcionalidade para as tabelas `ActivityLogTable` e `RevenueHistory` gerarem arquivos `.csv`.
+*   **Tour Interativo (Onboarding)**:
+    *   Implementação de um driver de tours (ex: `react-joyride`) ativado apenas no primeiro login (`isFirstLogin: true` no Firestore).
+
+## 3. Componentes de UI (Components)
+
+*   **`ManualContentEditor`**: Componente rico para edição de textos e organização de tópicos de ajuda.
+*   **`TestimonialCard`**: Componente de visualização de depoimento com foto do cliente, nota (estrelas) e texto de feedback.
+*   **`DynamicFormRenderer`**: Componente para renderizar formulários baseados em JSON (Templates criados pelo admin).
+*   **`AICoachingBubble`**: Interface de chat flutuante ou dedicada para interação direta com o mentor IA.
+*   **`MultiLangSupport`**: Refatoração de textos estáticos em componentes UI para utilizar a função `t()` do i18next.
+
+## 4. Próximos Passos Prioritários
+
+1.  Desenvolvimento do **Editor de Manuais** para remover a estaticidade da central de ajuda.
+2.  Implementação do **Relatório Consolidado em PDF** para aumentar o valor entregue aos mentores.
+3.  Início da refatoração de **Internacionalização** completa.
