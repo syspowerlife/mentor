@@ -34,6 +34,25 @@ O PowerLife é uma plataforma full-stack moderna para coaches, gestores e profis
    npm run dev
    ```
 
+## 🌐 Hospedagem (GitHub Pages)
+
+Para hospedar no GitHub Pages:
+
+1. **Configurações do Repositório**:
+   - Vá em **Settings > Pages**.
+   - Em **Build and deployment > Source**, escolha **GitHub Actions**.
+
+2. **Segredos (Secrets)**:
+   - Vá em **Settings > Secrets and variables > Actions**.
+   - Adicione as seguintes chaves (opcional, ou o sistema usará 'mock' para o build):
+     - `VITE_FIREBASE_API_KEY`
+     - `VITE_FIREBASE_AUTH_DOMAIN`
+     - `VITE_FIREBASE_PROJECT_ID`
+     - ... (demais variáveis do Firebase)
+
+3. **Deploy Automático**:
+   - Sempre que você fizer um push para a branch `main` ou `master`, o GitHub Actions irá compilar e publicar o site automaticamente.
+
 ## 🏗️ Estrutura do Projeto
 
 - `/src/pages`: Páginas principais (Dashboard, Clientes, Assessments).
